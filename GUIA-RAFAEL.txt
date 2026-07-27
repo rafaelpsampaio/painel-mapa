@@ -1,0 +1,64 @@
+PAINEL MAPA
+GUIA DO RAFAEL (instalacao e manutencao)
+====================================================================
+
+PARTE 1: INSTALAR NO COMPUTADOR DELA (uma vez so)
+  1. Instale o Python: https://www.python.org/downloads/
+     Na instalacao, MARQUE "py launcher" e "Add python.exe to PATH".
+  2. Copie a pasta do app inteira para o computador dela
+     (ex.: Documentos\painel-mapa), COM UMA EXCECAO: nao leve a
+     subpasta .git. Sem ela, o app entra em modo "instalacao" e passa
+     a se atualizar sozinho pelo GitHub.
+     Dica: baixar o zip do proprio GitHub ja vem sem .git:
+     https://github.com/rafaelpsampaio/painel-mapa (Code > Download ZIP)
+  3. Coloque o arquivo token_cache.json (o acesso ao email) na raiz
+     da pasta. Mande por canal privado e apague da conversa depois.
+     Alternativa sem arquivo: pular este passo; no primeiro uso o
+     painel pede login por codigo e ela entra uma vez.
+  4. De dois cliques em instalar.bat. Ele cria o atalho "Painel MAPA"
+     (coracao) na area de trabalho e pergunta se deve abrir junto com
+     o Windows (recomendo responder s).
+  5. Teste: dois cliques no coracao, espere carregar, confira os
+     numeros. Entregue junto o GUIA-DRA-GISELE.txt.
+
+PARTE 2: FAZER ALTERACOES DO SEU COMPUTADOR (dia a dia)
+  1. Edite o codigo na pasta do projeto (ou peca ao Claude).
+  2. Teste local sem afetar o painel real:
+        py painel.py 8799
+     (abre em http://127.0.0.1:8799; Ctrl+C encerra)
+  3. Publique:
+        git add -A
+        git commit -m "descricao da mudanca"
+        git push
+  4. Pronto. Na proxima vez que ela abrir o painel, a instalacao dela
+     baixa a versao nova sozinha, antes de iniciar.
+  Importante: na SUA maquina o autoatualizador fica desligado (a
+  pasta .git sinaliza maquina de desenvolvimento); quem manda no seu
+  codigo e o git.
+
+PARTE 3: SE UMA ATUALIZACAO DER PROBLEMA
+  1. Reverta o commit ruim:
+        git revert HEAD
+        git push
+  2. Na proxima abertura, o painel dela "volta" sozinho.
+
+PARTE 4: MANUTENCOES OCASIONAIS
+  - Acesso ao email parou (90 dias sem uso ou revogado): o proprio
+    painel mostra a tela de login com codigo; ela resolve sozinha.
+  - Demonstrativo em formato novo (empresa nova, layout novo):
+    encaminhar um exemplo para controlemapa@hotmail.com e ajustar o
+    processador (ler_repasses.py / cruzar_pagamentos.py).
+  - Diagnostico no PC dela: relatorios\painel.log guarda os erros;
+    "Painel MAPA.bat" abre com a janela visivel para ver mensagens.
+  - Baixas manuais ficam locais em cada computador (baixas.txt).
+
+MAPA DOS ARQUIVOS (referencia rapida)
+  painel.py / painel.html ....... servidor e interface
+  rotina_pendencias.py .......... leitura da caixa e conciliacao
+  cruzar_pagamentos.py .......... cruzamento laudo x pagamento
+  ler_repasses.py ............... leitura dos demonstrativos
+  baixar_repasses.py ............ busca demonstrativos na caixa
+  outlook_auth.py ............... acesso Microsoft (login por codigo)
+  atualizar_app.py / iniciar.py . autoatualizacao e ponto de entrada
+  instalar.bat / criar_atalho.vbs / iniciar_painel.vbs / gerar_icone.py
+     ........................... instalacao do atalho e inicio oculto

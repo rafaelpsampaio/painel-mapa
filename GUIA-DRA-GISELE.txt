@@ -1,0 +1,70 @@
+PAINEL MAPA
+GUIA DA DRA. GISELE
+====================================================================
+
+COMO ABRIR
+  1. Na area de trabalho, de dois cliques no coracao "Painel MAPA".
+  2. O navegador abre sozinho. Espere cerca de 1 minuto enquanto ele
+     le a caixa de email (aparece uma rodinha girando).
+  3. Pronto: os numeros aparecem.
+
+O QUE OS CARTOES SIGNIFICAM
+  Atrasados ............. exames com prazo vencido e sem laudo. E o
+                          numero que importa: o ideal e ZERO.
+  Aguardando prazo ...... exames que chegaram e ainda estao dentro da
+                          data prometida. Fila normal de trabalho.
+  Laudos enviados ....... exames que voce ja respondeu com o PDF.
+  Pagamentos confirmados  laudos que ja apareceram em demonstrativo
+                          de pagamento (IDS ou Unimed).
+  Sem registro de
+  pagamento ............. laudos que ja deviam ter aparecido em algum
+                          pagamento e nao apareceram. Clique no cartao
+                          para ver a lista. Muitos casos sao apenas
+                          atraso do faturamento dos convenios.
+  Para conferir ......... casos estranhos: por exemplo, email
+                          respondido sem o PDF do laudo. Vale olhar.
+
+PARA PROCURAR UM PACIENTE
+  1. Clique na aba "Exames" (no alto da tela).
+  2. Digite o nome (ou o codigo do exame) na caixa de busca.
+  3. A linha mostra tudo: quando chegou, prazo, se o laudo foi,
+     se o pagamento apareceu e por quem foi pago.
+
+PARA DAR BAIXA EM UM EXAME
+  Use quando um exame foi resolvido fora do email (laudo entregue
+  por WhatsApp, exame cancelado, repetido etc.).
+  1. Ache o exame (na aba Exames ou na lista de pendentes).
+  2. Clique no botao "Dar baixa" da linha dele.
+  3. Escreva o motivo e confirme. Ele sai da lista de pendentes.
+
+PARA VER OS PAGAMENTOS
+  Aba "Financeiro": producao e valores por empresa (IDS, Unimed,
+  CardioPro), mes a mes. Quando chegar o demonstrativo novo por
+  email, ele entra sozinho na proxima vez que o painel abrir.
+
+SE PEDIR PARA ENTRAR NA CONTA
+  As vezes (raramente) o painel pede login. A propria tela mostra:
+  1. Abra o endereco microsoft.com/link no navegador.
+  2. Digite o codigo grande que aparece na tela do painel.
+  3. Entre com a conta controlemapa@hotmail.com.
+  O painel continua sozinho depois disso.
+
+PARA FECHAR
+  Clique no botao "Encerrar" no alto do painel. (Se so fechar a aba
+  do navegador, nao tem problema nenhum: o programa fica quieto e o
+  proximo clique no coracao abre na hora.)
+
+SE ALGO DER ERRADO
+  1. Feche tudo e clique de novo no coracao "Painel MAPA".
+  2. Se continuar, mande um print da tela para o Rafael.
+  3. Sem internet o painel nao consegue ler o email; confira a
+     conexao.
+
+LEMBRETES
+  - O painel so LE os emails. Ele nunca responde, apaga ou move nada.
+  - Continue respondendo os exames por email normalmente, anexando o
+    PDF com o codigo do exame no nome. E assim que o painel entende
+    que o laudo foi enviado.
+  - Encaminhe para controlemapa@hotmail.com todo demonstrativo de
+    pagamento que receber (IDS, Unimed, CardioPro). O painel le
+    sozinho.
