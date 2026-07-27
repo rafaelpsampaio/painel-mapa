@@ -1,0 +1,66 @@
+CONTROLE DE RETORNOS DE EXAMES MAPA - GUIA
+====================================================================
+
+O QUE FAZ
+  Le a caixa controlemapa@hotmail.com (somente leitura, nada e
+  alterado) e mostra num painel no navegador: quais exames ja foram
+  retornados (laudo em PDF enviado), quais estao pendentes, casos
+  para conferir, ultimo exame recebido por fonte, se o email esta
+  ativo e possiveis exames que nao chegaram (numeracao pulada).
+
+INSTALACAO EM UM COMPUTADOR NOVO (Windows)
+  1. Instale o Python: https://www.python.org/downloads/
+     Na instalacao, marque as opcoes "py launcher" e "Add to PATH".
+  2. Copie esta pasta INTEIRA para o computador (ex.: Documentos).
+     Se copiar tambem o arquivo token_cache.json, o acesso ao email
+     ja vai junto e nao precisa logar de novo.
+  3. De duplo clique em "instalar.bat". Ele cria o atalho
+     "Painel MAPA" (com icone de coracao) na area de trabalho e
+     pergunta se o painel deve abrir sozinho junto com o Windows.
+
+USO NO DIA A DIA
+  - Duplo clique em "Painel MAPA" (area de trabalho). O painel abre
+    no navegador, SEM janela preta; a leitura da caixa leva cerca de
+    um minuto.
+  - A atualizacao acontece ao abrir e no botao "Atualizar" do painel.
+  - Para fechar de vez, use o botao "Encerrar" no topo do painel
+    (fechar so a aba do navegador deixa o programa rodando quieto ao
+    fundo, sem fazer nada; nao tem problema).
+  - O painel tambem guarda um relatorio em texto por dia na pasta
+    relatorios\ (pendencias_AAAA-MM-DD.txt). Problemas ficam
+    registrados em relatorios\painel.log.
+  - Alternativa com janela visivel (para diagnostico):
+    "Painel MAPA.bat".
+
+DAR BAIXA MANUAL
+  Quando um exame foi resolvido fora do email (laudo entregue por
+  WhatsApp, exame cancelado, repetido etc.), clique no botao
+  "Dar baixa" na linha do exame, escreva o motivo e pronto: ele sai
+  dos pendentes.
+  As baixas ficam no arquivo baixas.txt; para desfazer uma baixa,
+  apague a linha correspondente nesse arquivo.
+
+SE PEDIR PARA ENTRAR NA CONTA (acesso expirado)
+  O proprio painel mostra na tela um link (microsoft.com/link) e um
+  codigo. Abra o link, digite o codigo e entre com a conta
+  controlemapa@hotmail.com. O painel continua sozinho em seguida.
+  Isso so acontece se ficar ~90 dias sem usar, ou se o acesso for
+  revogado na conta Microsoft.
+
+SEGURANCA
+  - O painel so funciona dentro do proprio computador (localhost);
+    nada fica acessivel pela internet.
+  - O arquivo token_cache.json da acesso de leitura a caixa de email.
+    Trate a pasta como confidencial e nao a envie por email/nuvem
+    publica.
+  - Para revogar o acesso: account.microsoft.com > Privacidade >
+    Aplicativos e servicos, remover "Microsoft Graph Command Line
+    Tools". Ou simplesmente apague token_cache.json.
+
+PARA QUEM MANTEM (arquivos)
+  painel.py / painel.html ... servidor e pagina do painel
+  rotina_pendencias.py ...... motor da conciliacao (tambem roda
+                              sozinho: py rotina_pendencias.py)
+  outlook_auth.py ........... login e renovacao do acesso
+  Conferir Pendencias MAPA.bat / Dar Baixa.bat / Autenticar Email.bat
+                              alternativas em modo texto

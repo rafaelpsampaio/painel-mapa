@@ -1,0 +1,18 @@
+# credenciais e dados locais: NUNCA versionar
+token_cache.json
+update_token.txt
+.env
+.env.txt
+baixas.txt
+.versao
+
+# dados baixados/gerados localmente
+relatorios/
+repasses/
+amostras/
+relatorio_*.txt
+painel.ico
+
+# python
+__pycache__/
+*.pyc

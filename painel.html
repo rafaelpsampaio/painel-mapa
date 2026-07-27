@@ -1,0 +1,656 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Exames MAPA · Controle</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f8;
+         color: #223; font-size: 17px; padding-bottom: 60px; }
+  header { background: #1e5a8a; color: #fff; padding: 16px 24px 0;
+           display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+  header h1 { font-size: 24px; flex: 1; min-width: 240px; }
+  header .sub { font-size: 14px; opacity: .85; width: 100%; }
+  select, button, input[type=text] { font-size: 16px; padding: 9px 14px;
+    border-radius: 8px; border: 1px solid #ccc; }
+  select, button { cursor: pointer; }
+  #btn-atualizar { background: #ffb300; border: none; font-weight: 600; }
+  #btn-atualizar:disabled { opacity: .6; cursor: wait; }
+  nav.abas { background: #1e5a8a; padding: 10px 24px 0; display: flex; gap: 6px; }
+  nav.abas button { border: none; border-radius: 10px 10px 0 0;
+    padding: 12px 22px; font-size: 17px; background: #16466c; color: #cfe0ef; }
+  nav.abas button.ativa { background: #f4f6f8; color: #1e5a8a; font-weight: 700; }
+  main, .tela { max-width: 1180px; margin: 22px auto; padding: 0 16px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
+  .card { flex: 1; min-width: 150px; background: #fff; border-radius: 12px;
+          padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .card .num { font-size: 38px; font-weight: 700; }
+  .card .rot { font-size: 15px; color: #556; }
+  .card.vermelho .num { color: #c62828; }
+  .card.verde .num { color: #2e7d32; }
+  .card.ambar .num { color: #b26a00; }
+  .card.cinza .num { color: #546e7a; }
+  .card.azul .num { color: #1e5a8a; }
+  section.bloco { background: #fff; border-radius: 12px; padding: 18px 20px;
+                  margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  section.bloco h2 { font-size: 20px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid #eee;
+           font-size: 15px; }
+  th { color: #667; font-size: 13px; text-transform: uppercase;
+       position: sticky; top: 0; background: #fff; z-index: 2;
+       box-shadow: 0 1px 0 #e0e0e0; }
+  tr:last-child td { border-bottom: none; }
+  .codigo { font-family: Consolas, monospace; white-space: nowrap; }
+  .btn-baixa { background: #eceff1; border: 1px solid #b0bec5; font-size: 13px;
+               padding: 5px 10px; }
+  .btn-baixa:hover { background: #cfd8dc; }
+  .ok-grande { text-align: center; padding: 30px; font-size: 22px;
+               color: #2e7d32; }
+  .alerta { color: #c62828; font-weight: 600; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
+           font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .b-atrasado { background: #fdecea; color: #c62828; }
+  .b-no_prazo { background: #e3f0fa; color: #1e5a8a; }
+  .b-retornado { background: #e8f5e9; color: #2e7d32; }
+  .b-provavel, .b-aviso { background: #fff3cd; color: #8a6d00; }
+  .b-baixado { background: #eceff1; color: #546e7a; }
+  .pago { color: #2e7d32; font-weight: 600; white-space: nowrap; }
+  details { margin-bottom: 14px; }
+  details summary { font-size: 18px; padding: 12px 16px; background: #fff;
+                    border-radius: 10px; cursor: pointer;
+                    box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  details .corpo { background: #fff; border-radius: 0 0 10px 10px;
+                   padding: 12px 16px; }
+  .filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+             align-items: center; }
+  .filtros input[type=text] { flex: 1; min-width: 220px; }
+  .filtros .contagem { color: #667; font-size: 15px; margin-left: auto; }
+  .oculto { display: none !important; }
+  #carregando { text-align: center; padding: 60px 20px; }
+  .spinner { width: 46px; height: 46px; border: 5px solid #cfd8dc;
+             border-top-color: #1e5a8a; border-radius: 50%;
+             animation: gira 1s linear infinite; margin: 0 auto 18px; }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  #tela-login { background: #fff; border-radius: 12px; padding: 30px;
+                text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  #tela-login h2 { margin-bottom: 16px; }
+  #tela-login ol { text-align: left; display: inline-block; font-size: 19px;
+                   line-height: 2; }
+  #login-codigo { font-size: 34px; font-weight: 700; letter-spacing: 4px;
+                  background: #fff3cd; padding: 4px 14px; border-radius: 8px; }
+  #login-status { margin-top: 18px; color: #667; }
+  .rodape { text-align: center; color: #99a; font-size: 13px; margin-top: 30px; }
+  #banner-offline { position: fixed; top: 0; left: 0; right: 0; z-index: 10;
+                    background: #c62828; color: #fff; text-align: center;
+                    padding: 12px 16px; font-size: 17px; }
+  .nota { color: #667; font-size: 14px; margin: 6px 0; }
+</style>
+</head>
+<body>
+<div id="banner-offline" class="oculto">O programa do painel não está
+aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
+"Painel MAPA"; esta página reconecta sozinha.</div>
+<header>
+  <h1>Exames MAPA &middot; Controle</h1>
+  <label style="color:#fff">Período
+    <select id="dias">
+      <option value="30" selected>30 dias</option>
+      <option value="60">60 dias</option>
+      <option value="90">90 dias</option>
+      <option value="180">180 dias (mais lento)</option>
+    </select>
+  </label>
+  <button id="btn-atualizar" onclick="carregar()">&#8635; Atualizar</button>
+  <button id="btn-sair" onclick="encerrar()" title="Fecha o painel por completo"
+    style="background:#16466c;color:#dfe9f2;border:1px solid #3a6d99">
+    Encerrar</button>
+  <div class="sub" id="subtitulo">&nbsp;</div>
+</header>
+<nav class="abas">
+  <button id="aba-btn-geral" class="ativa" onclick="mostraAba('geral')">Visão geral</button>
+  <button id="aba-btn-exames" onclick="mostraAba('exames')">Exames</button>
+  <button id="aba-btn-financeiro" onclick="mostraAba('financeiro')">Financeiro</button>
+</nav>
+
+<div class="tela" id="carregando">
+  <div class="spinner"></div>
+  <p>Lendo a caixa de email&hellip; isso pode levar um minuto.</p>
+</div>
+
+<div class="tela oculto" id="tela-login">
+  <h2>Precisa entrar na conta de email</h2>
+  <p>O acesso ao email expirou. É rápido:</p>
+  <ol>
+    <li>Abra <a id="login-link" href="#" target="_blank" rel="noopener"></a></li>
+    <li>Digite o código: <span id="login-codigo"></span></li>
+    <li>Entre com a conta <b>controlemapa@hotmail.com</b></li>
+  </ol>
+  <p id="login-status">Aguardando você entrar&hellip; esta página continua sozinha.</p>
+</div>
+
+<div class="tela oculto" id="tela-erro">
+  <section class="bloco">
+    <h2>Algo deu errado</h2>
+    <p id="erro-msg"></p>
+    <p style="margin-top:10px">Tente clicar em <b>Atualizar</b>. Se persistir,
+       verifique a conexão com a internet.</p>
+  </section>
+</div>
+
+<main id="conteudo" class="oculto">
+  <div id="aba-geral">
+    <div class="cards" id="cards"></div>
+    <section class="bloco" id="sec-pendentes"></section>
+    <section class="bloco" id="sec-status"></section>
+    <div id="sec-extras"></div>
+  </div>
+
+  <div id="aba-exames" class="oculto">
+    <section class="bloco">
+      <h2>Todos os exames do período</h2>
+      <p class="nota">Ciclo completo por exame: recebido &rarr; laudo &rarr;
+        pagamento. O pagamento é casado por nome e data com os demonstrativos
+        (eles não trazem o código do exame): correspondência provável.</p>
+      <p class="nota" id="cobertura-nota"></p>
+      <div class="filtros">
+        <input type="text" id="f-busca" placeholder="Buscar paciente ou código&hellip;">
+        <select id="f-empresa"><option value="">Todas as empresas</option></select>
+        <select id="f-status">
+          <option value="">Todos os status</option>
+          <option value="atrasado">Atrasados</option>
+          <option value="no_prazo">Aguardando prazo</option>
+          <option value="provavel">Conferir (nome parecido)</option>
+          <option value="aviso">Conferir (respondido sem laudo)</option>
+          <option value="retornado">Laudo enviado</option>
+          <option value="baixado">Baixados</option>
+        </select>
+        <select id="f-pag">
+          <option value="">Pagamento: todos</option>
+          <option value="pago">Pagamento confirmado</option>
+          <option value="faltando">Sem registro (período já pago)</option>
+          <option value="nao">Sem pagamento (qualquer motivo)</option>
+        </select>
+        <span class="contagem" id="f-contagem"></span>
+      </div>
+      <div id="tabela-exames"></div>
+    </section>
+  </div>
+
+  <div id="aba-financeiro" class="oculto">
+    <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
+    <div id="sec-orfaos"></div>
+  </div>
+
+  <p class="rodape">Somente leitura da caixa controlemapa@hotmail.com.
+     Baixas manuais ficam registradas no arquivo baixas.txt.</p>
+</main>
+
+<script>
+let dados = null;
+
+function esc(t) {
+  return String(t == null ? "" : t).replace(/[&<>"']/g,
+    c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function dataBr(iso) {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + "/" + m[2];  // data pura: sem conversao de fuso
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit"});
+}
+function brl(v) {
+  if (v == null) return "";
+  return v.toLocaleString("pt-BR", {style: "currency", currency: "BRL"});
+}
+function normJs(s) {
+  return (s || "").toUpperCase().normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+function mostrar(id) {
+  for (const t of ["carregando", "tela-login", "tela-erro", "conteudo"])
+    document.getElementById(t).classList.toggle("oculto", t !== id);
+}
+function mostraAba(nome) {
+  for (const a of ["geral", "exames", "financeiro"]) {
+    document.getElementById("aba-" + a).classList.toggle("oculto", a !== nome);
+    document.getElementById("aba-btn-" + a).classList.toggle("ativa", a === nome);
+  }
+}
+
+async function carregar() {
+  const btn = document.getElementById("btn-atualizar");
+  btn.disabled = true;
+  mostrar("carregando");
+  try {
+    const dias = document.getElementById("dias").value;
+    const r = await fetch("/api/dados?dias=" + dias);
+    const d = await r.json();
+    if (d.precisa_login) { await telaLogin(); return; }
+    if (d.erro) throw new Error(d.erro);
+    dados = d;
+    render();
+    mostrar("conteudo");
+  } catch (e) {
+    const semServidor = (e instanceof TypeError);
+    document.getElementById("erro-msg").textContent = semServidor
+      ? "Não consegui falar com o programa do painel. Ele funciona junto " +
+        "com a janelinha preta que abre com o atalho 'Painel MAPA'; se ela " +
+        "foi fechada, feche esta aba e dê duplo clique no atalho de novo."
+      : (e.message || String(e));
+    mostrar("tela-erro");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function telaLogin() {
+  const r = await fetch("/api/login/start");
+  const s = await r.json();
+  if (s.erro) {
+    document.getElementById("erro-msg").textContent = s.erro;
+    mostrar("tela-erro");
+    return;
+  }
+  const link = document.getElementById("login-link");
+  link.href = s.uri; link.textContent = s.uri;
+  document.getElementById("login-codigo").textContent = s.codigo;
+  mostrar("tela-login");
+  const timer = setInterval(async () => {
+    try {
+      const p = await (await fetch(
+        "/api/login/poll?device_code=" + encodeURIComponent(s.device_code))).json();
+      if (p.status === "ok") {
+        clearInterval(timer);
+        carregar();
+      } else if (p.status !== "aguardando") {
+        clearInterval(timer);
+        document.getElementById("login-status").innerHTML =
+          "<span class='alerta'>Falhou: " + esc(p.status) +
+          "</span>. Clique em Atualizar para tentar de novo.";
+      }
+    } catch (e) { /* tenta de novo no proximo tique */ }
+  }, (s.intervalo || 5) * 1000);
+}
+
+async function darBaixa(codigo) {
+  const motivo = prompt(
+    "Dar baixa no exame " + codigo +
+    "\n(use quando foi resolvido fora do email)\n\nMotivo (opcional):");
+  if (motivo === null) return;
+  const r = await fetch("/api/baixa", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({codigo: codigo, motivo: motivo})
+  });
+  const resp = await r.json();
+  if (!resp.ok) { alert("Não deu certo: " + (resp.erro || "?")); return; }
+  for (const lista of ["pendentes", "provaveis", "avisos"]) {
+    const i = dados[lista].findIndex(e => e.codigo === codigo);
+    if (i >= 0) {
+      const ex = dados[lista].splice(i, 1)[0];
+      ex.baixa = codigo + ": " + (motivo || "sem motivo informado");
+      dados.baixados.push(ex);
+      dados.contagens[lista] -= 1;
+      dados.contagens.baixados += 1;
+      break;
+    }
+  }
+  render();
+}
+
+const ROTULOS = {atrasado: "Atrasado", no_prazo: "Aguardando prazo",
+  provavel: "Conferir", aviso: "Conferir", retornado: "Laudo enviado",
+  baixado: "Baixado"};
+
+function todosExames() {
+  const out = [];
+  const add = (lista, status) =>
+    (dados[lista] || []).forEach(e => out.push({...e, status}));
+  add("pendentes", "pendente");
+  add("provaveis", "provavel");
+  add("avisos", "aviso");
+  add("baixados", "baixado");
+  add("retornados", "retornado");
+  out.forEach(e => {
+    if (e.status === "pendente") e.status = e.atrasado ? "atrasado" : "no_prazo";
+  });
+  out.sort((a, b) => (b.recebido || "").localeCompare(a.recebido || ""));
+  return out;
+}
+
+function renderExames() {
+  if (!dados) return;
+  const busca = normJs(document.getElementById("f-busca").value.trim());
+  const emp = document.getElementById("f-empresa").value;
+  const st = document.getElementById("f-status").value;
+  const pg = document.getElementById("f-pag").value;
+  let lista = todosExames();
+  if (emp) lista = lista.filter(e => e.empresa === emp);
+  if (st) lista = lista.filter(e => e.status === st);
+  if (pg === "pago") lista = lista.filter(e => e.pagamento);
+  if (pg === "faltando")
+    lista = lista.filter(e => e.pagamento_esperado && !e.pagamento);
+  if (pg === "nao") lista = lista.filter(e => !e.pagamento);
+  if (busca) lista = lista.filter(e =>
+    normJs((e.nome || "") + " " + e.codigo).includes(busca));
+
+  document.getElementById("f-contagem").textContent =
+    lista.length + " exame" + (lista.length === 1 ? "" : "s");
+
+  const LIMITE = 800;
+  const corte = lista.length > LIMITE;
+  const linhas = lista.slice(0, LIMITE).map(e => {
+    const podeBaixa = ["atrasado", "no_prazo", "provavel", "aviso"]
+      .includes(e.status);
+    const pagCelula = e.pagamento
+      ? (e.pagamento.tipo === "faturado"
+        ? "<span class='badge b-no_prazo' title='Consta na planilha de " +
+          "produção da CardioPro; o pagamento em si vem pela Unimed'>" +
+          "faturado</span>"
+        : "<span class='pago' title='" + esc(e.pagamento.origem || "") +
+          "'>✓ " +
+          (e.pagamento.valor != null ? brl(e.pagamento.valor) + " " : "") +
+          (e.pagamento.pagador ? "(" + esc(e.pagamento.pagador) + ")" : "") +
+          "</span>")
+      : (e.repeticao
+        ? "<span class='badge b-baixado' title='Exame repetido em " +
+          "intervalo curto; o pagamento saiu no exame irmão'>" +
+          "repetição</span>"
+        : (e.pagamento_esperado
+          ? "<span class='badge b-provavel' title='O pagador responsável " +
+            "já cobre exames desta data e este não apareceu nos " +
+            "demonstrativos recebidos'>sem registro</span>"
+          : "<span style='color:#99a'>aguardando ciclo</span>"));
+    return "<tr><td class='codigo'>" + esc(e.codigo) + "</td>" +
+      "<td>" + esc(e.nome || "(sem nome)") + "</td>" +
+      "<td>" + esc(e.empresa) + "</td>" +
+      "<td>" + dataBr(e.recebido) + "</td>" +
+      "<td>" + (e.prazo ? dataBr(e.prazo)
+                        : "<span style='color:#99a'>sem prazo</span>") + "</td>" +
+      "<td><span class='badge b-" + e.status + "'>" +
+        ROTULOS[e.status] + "</span></td>" +
+      "<td>" + (e.retornado_em ? dataBr(e.retornado_em) : "") + "</td>" +
+      "<td>" + pagCelula + "</td>" +
+      "<td>" + (podeBaixa
+        ? "<button class='btn-baixa' onclick=\"darBaixa('" + esc(e.codigo) +
+          "')\">Dar baixa</button>" : "") + "</td></tr>";
+  }).join("");
+
+  document.getElementById("tabela-exames").innerHTML =
+    "<table><tr><th>Código</th><th>Paciente</th><th>Empresa</th>" +
+    "<th>Recebido</th><th>Prazo</th><th>Status</th><th>Laudo</th>" +
+    "<th>Pagamento</th><th></th></tr>" + linhas + "</table>" +
+    (corte ? "<p class='nota'>Mostrando os primeiros " + LIMITE +
+      "; refine os filtros para ver o restante.</p>" : "");
+}
+
+function preencherFiltroEmpresas() {
+  const sel = document.getElementById("f-empresa");
+  const atual = sel.value;
+  const nomes = [...new Set(todosExames().map(e => e.empresa))].sort();
+  sel.innerHTML = "<option value=''>Todas as empresas</option>" +
+    nomes.map(n => "<option value='" + esc(n) + "'>" + esc(n) + "</option>")
+      .join("");
+  if (nomes.includes(atual)) sel.value = atual;
+}
+
+function linhaExame(ex, extra) {
+  const prazo = ex.prazo
+    ? (ex.atrasado ? "<span class='alerta'>" + dataBr(ex.prazo) + "</span>"
+                   : dataBr(ex.prazo))
+    : "<span style='color:#99a'>não informado</span>";
+  return "<tr><td class='codigo'>" + esc(ex.codigo) + "</td>" +
+    "<td>" + esc(ex.nome || "(nome não identificado)") + "</td>" +
+    "<td>" + esc(ex.fonte) + "</td>" +
+    "<td>" + dataBr(ex.recebido) + " (" + ex.dias_espera + "d)</td>" +
+    "<td>" + prazo + "</td>" +
+    (extra || "") +
+    "<td><button class='btn-baixa' onclick=\"darBaixa('" +
+      esc(ex.codigo) + "')\">Dar baixa</button></td></tr>";
+}
+
+function render() {
+  const c = dados.contagens;
+  document.getElementById("subtitulo").textContent =
+    "Últimos " + dados.dias + " dias · atualizado em " + dados.gerado_em +
+    " · email ativo ✓";
+
+  const atrasados = dados.pendentes.filter(e => e.atrasado);
+  const noPrazo = dados.pendentes.filter(e => !e.atrasado);
+  const pagos = dados.retornados.filter(e =>
+    e.pagamento && e.pagamento.tipo !== "faturado").length;
+  const emFalta = todosExames()
+    .filter(e => e.pagamento_esperado && !e.pagamento).length;
+
+  document.getElementById("cards").innerHTML =
+    "<div class='card vermelho'><div class='num'>" + atrasados.length +
+      "</div><div class='rot'>Atrasados</div></div>" +
+    "<div class='card azul'><div class='num'>" + noPrazo.length +
+      "</div><div class='rot'>Aguardando prazo</div></div>" +
+    "<div class='card verde'><div class='num'>" + c.retornados +
+      "</div><div class='rot'>Laudos enviados</div></div>" +
+    "<div class='card verde'><div class='num'>" + pagos +
+      "</div><div class='rot'>Pagamentos confirmados</div></div>" +
+    "<div class='card ambar' style='cursor:pointer' onclick='verFaltando()'" +
+      " title='Laudos dentro do período que os demonstrativos ja pagam, " +
+      "mas sem registro neles. Clique para ver a lista'><div class='num'>" +
+      emFalta + "</div><div class='rot'>Sem registro de pagamento</div></div>" +
+    "<div class='card ambar'><div class='num'>" + (c.provaveis + c.avisos) +
+      "</div><div class='rot'>Para conferir</div></div>" +
+    "<div class='card cinza'><div class='num'>" + c.recebidos +
+      "</div><div class='rot'>Recebidos no período</div></div>";
+
+  const cob = dados.cobertura_pagamentos || {};
+  const cobNomes = Object.keys(cob);
+  document.getElementById("cobertura-nota").textContent = cobNomes.length
+    ? "Pagamentos já cobrem exames de: " + cobNomes.map(n =>
+        n + " " + dataBr(cob[n].inicio) + " a " + dataBr(cob[n].fim))
+        .join(" · ") + ". Laudo dentro dessa janela sem pagamento " +
+        "aparece como \"sem registro\"."
+    : "";
+
+  const cab = "<table><tr><th>Código</th><th>Paciente</th>" +
+    "<th>Quem enviou</th><th>Recebido</th><th>Prazo</th><th></th></tr>";
+  const sp = document.getElementById("sec-pendentes");
+  let spHtml = "";
+  if (atrasados.length === 0) {
+    spHtml += "<div class='ok-grande'>&#10004; Nenhum exame atrasado!</div>";
+  } else {
+    spHtml += "<h2 class='alerta'>Atrasados (prazo vencido)</h2>" + cab +
+      atrasados.map(e => linhaExame(e)).join("") + "</table>";
+  }
+  if (noPrazo.length) {
+    spHtml += "<h2 style='margin-top:16px'>Aguardando prazo (laudo ainda " +
+      "não enviado, dentro da data prometida)</h2>" + cab +
+      noPrazo.map(e => linhaExame(e)).join("") + "</table>";
+  }
+  sp.innerHTML = spHtml;
+
+  const st = dados.status;
+  let stHtml = "<h2>Situação da caixa de email</h2>";
+  if (st.ultimo) {
+    stHtml += "<p>Último exame recebido: <b class='codigo'>" +
+      esc(st.ultimo.codigo) + "</b> (" + esc(st.ultimo.nome || "sem nome") +
+      "), em " + dataBr(st.ultimo.recebido) + ".</p>";
+  }
+  if (st.empresas && st.empresas.length) {
+    stHtml += "<p style='margin:8px 0 4px'><b>Por empresa:</b> " +
+      st.empresas.map(e => esc(e.empresa) + ": " + e.exames + " mapas (" +
+        e.pendentes + " pend.)").join(" · ") + "</p>";
+  }
+  stHtml += "<table><tr><th>Fonte</th><th>Exames</th><th>Último envio</th></tr>" +
+    st.fontes.map(f =>
+      "<tr><td>" + esc(f.fonte) + "</td><td>" + f.exames + "</td><td>" +
+      dataBr(f.ultimo) +
+      (f.dias_sem_enviar >= 7 ? " <span class='alerta'>sem enviar há " +
+        f.dias_sem_enviar + " dias</span>" : "") +
+      "</td></tr>").join("") + "</table>";
+  document.getElementById("sec-status").innerHTML = stHtml;
+
+  let extras = "";
+  if (dados.provaveis.length) {
+    extras += "<details open><summary>Provavelmente laudados, conferir (" +
+      dados.provaveis.length + ")</summary><div class='corpo'>" +
+      "<p>Sem o PDF com o código, mas um nome parecido aparece em resposta " +
+      "enviada.</p><table>" +
+      dados.provaveis.map(e => linhaExame(e,
+        "<td>" + esc(e.evidencia.origem) + "</td>")).join("") +
+      "</table></div></details>";
+  }
+  if (dados.avisos.length) {
+    extras += "<details open><summary>Respondidos sem laudo anexado, conferir (" +
+      dados.avisos.length + ")</summary><div class='corpo'>" +
+      "<p>O email foi respondido, mas sem PDF do exame e sem nome parecido. " +
+      "Vale conferir se o laudo realmente foi.</p><table>" +
+      dados.avisos.map(e => linhaExame(e)).join("") + "</table></div></details>";
+  }
+  if (dados.buracos.length) {
+    extras += "<details><summary>Possíveis exames não recebidos, numeração pulada (" +
+      dados.buracos.length + ")</summary><div class='corpo'>" +
+      "<p>Números pulados nas sequências das fontes. Pode ser exame que não " +
+      "chegou, ou exame de outro médico.</p><p class='codigo'>" +
+      dados.buracos.map(esc).join(" &nbsp; ") + "</p></div></details>";
+  }
+  if (dados.baixados.length) {
+    extras += "<details><summary>Baixados manualmente (" +
+      dados.baixados.length + ")</summary><div class='corpo'><table>" +
+      dados.baixados.map(e =>
+        "<tr><td class='codigo'>" + esc(e.codigo) + "</td><td>" +
+        esc(e.nome || "") + "</td><td>" + esc(e.baixa) + "</td></tr>")
+        .join("") + "</table></div></details>";
+  }
+  document.getElementById("sec-extras").innerHTML = extras;
+
+  const orf = document.getElementById("sec-orfaos");
+  if (dados.pagamentos_orfaos && dados.pagamentos_orfaos.length) {
+    orf.innerHTML =
+      "<details><summary>Pagamentos sem exame correspondente (" +
+      dados.pagamentos_orfaos.length + ")</summary><div class='corpo'>" +
+      "<p>Constam nos demonstrativos, dentro do período coberto pelos " +
+      "emails, mas nenhum exame da caixa casou por nome+data. Podem ser " +
+      "exames laudados fora do email (presenciais) ou divergência de " +
+      "nome.</p><table><tr><th>Empresa</th><th>Paciente</th>" +
+      "<th>Data do exame</th><th>Documento</th></tr>" +
+      dados.pagamentos_orfaos.map(o =>
+        "<tr><td>" + esc(o.empresa) + "</td><td>" + esc(o.nome) + "</td><td>" +
+        dataBr(o.data) + "</td><td style='font-size:13px;color:#667'>" +
+        esc(o.origem) + "</td></tr>").join("") + "</table></div></details>";
+  } else {
+    orf.innerHTML = "";
+  }
+
+  preencherFiltroEmpresas();
+  renderExames();
+}
+
+for (const id of ["f-busca", "f-empresa", "f-status", "f-pag"]) {
+  document.getElementById(id).addEventListener("input", renderExames);
+}
+
+function verFaltando() {
+  mostraAba("exames");
+  document.getElementById("f-pag").value = "faltando";
+  renderExames();
+}
+
+function brlSeguro(v) { return v == null ? "" : brl(v); }
+
+async function carregarFinanceiro() {
+  const sec = document.getElementById("sec-financeiro");
+  try {
+    const f = await (await fetch("/api/financeiro")).json();
+    const nomes = Object.keys(f.empresas || {});
+    if (!nomes.length) {
+      sec.innerHTML = "<p class='nota'>Nenhum demonstrativo na pasta " +
+        "repasses ainda.</p>";
+      return;
+    }
+    let h = "<h2>Produção e pagamentos (demonstrativos recebidos)</h2>";
+    for (const nome of ["IDS", "Unimed", "CardioPro"]) {
+      const emp = f.empresas[nome];
+      if (!emp) continue;
+      h += "<h3 style='margin:14px 0 6px'>" + esc(nome) + "</h3>";
+      for (const doc of emp.documentos) {
+        h += "<p class='nota'>" + esc(doc.arquivo) +
+          (doc.periodo ? " · período " + esc(doc.periodo) : "") +
+          (doc.emitido_em ? " · emitido " + esc(doc.emitido_em) : "") + "</p>";
+        if (doc.meses) {
+          h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
+            doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
+              m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") +
+            "</table>";
+        } else {
+          h += "<table><tr><th>Tipo</th>" +
+            (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
+            "<th>Qtd</th><th>Valor</th></tr>" +
+            doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
+              (doc.linhas.some(x => x.detalhe)
+                ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
+              "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
+              .join("") + "</table>";
+        }
+        if (doc.total) {
+          h += "<p><b>Total do documento: " + doc.total.qtd + " exames · " +
+            brlSeguro(doc.total.valor) + "</b></p>";
+        }
+        if (doc.executantes) {
+          h += "<p style='font-size:15px'>" + doc.executantes.map(e =>
+            esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
+            ")").join(" · ") + "</p>";
+          if (doc.bruto) {
+            h += "<p><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
+              " · Líquido: " + brlSeguro(doc.liquido) + "</b></p>";
+          }
+        }
+      }
+    }
+    sec.innerHTML = h;
+  } catch (e) {
+    sec.innerHTML = "<p class='nota'>Não consegui ler os demonstrativos.</p>";
+  }
+}
+carregarFinanceiro();
+
+let encerrado = false;
+async function encerrar() {
+  if (!confirm("Encerrar o painel? Para abrir de novo, use o atalho " +
+               "'Painel MAPA' da área de trabalho.")) return;
+  encerrado = true;
+  try { await fetch("/api/sair", {method: "POST"}); } catch (e) {}
+  document.body.innerHTML =
+    "<div style='text-align:center;padding:80px 20px;font-size:22px'>" +
+    "✔ Painel encerrado.<br><span style='font-size:17px;color:#667'>" +
+    "Pode fechar esta aba. Para abrir de novo, duplo clique no atalho " +
+    "\"Painel MAPA\".</span></div>";
+  setTimeout(() => window.close(), 800);
+}
+
+// vigia: avisa se o programa do painel fechar e reconecta quando voltar
+let offline = false;
+async function vigiar() {
+  if (encerrado) return;
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), 4000);
+    await fetch("/api/ping", {signal: ctl.signal});
+    clearTimeout(t);
+    if (offline) {
+      offline = false;
+      document.getElementById("banner-offline").classList.add("oculto");
+      carregar();
+    }
+  } catch (e) {
+    offline = true;
+    document.getElementById("banner-offline").classList.remove("oculto");
+  }
+}
+setInterval(vigiar, 15000);
+
+carregar();
+</script>
+</body>
+</html>
