@@ -108,6 +108,12 @@ class Handler(BaseHTTPRequestHandler):
             elif rota.path == "/api/financeiro":
                 self._json(ler_repasses.financeiro())
 
+            elif rota.path == "/api/config":
+                pasta = ler_repasses.pasta_documentos()
+                arquivos = (len(os.listdir(pasta)) if pasta else 0)
+                self._json({"pasta_documentos": pasta or "",
+                            "arquivos": arquivos})
+
             elif rota.path == "/api/login/start":
                 resp = outlook_auth.iniciar_device_flow()
                 self._json({
@@ -129,7 +135,22 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         rota = urlparse(self.path)
         try:
-            if rota.path == "/api/sair":
+            if rota.path == "/api/config":
+                tam = int(self.headers.get("Content-Length", "0"))
+                corpo = json.loads(self.rfile.read(tam).decode("utf-8"))
+                pasta = (corpo.get("pasta_documentos") or "").strip()
+                if pasta and not os.path.isdir(pasta):
+                    self._json({"ok": False,
+                                "erro": "Pasta não encontrada: " + pasta}, 400)
+                    return
+                with open(ler_repasses.ARQ_CONFIG_LOCAL, "w",
+                          encoding="utf-8") as f:
+                    json.dump({"pasta_documentos": pasta}, f,
+                              ensure_ascii=False)
+                arquivos = len(os.listdir(pasta)) if pasta else 0
+                self._json({"ok": True, "pasta_documentos": pasta,
+                            "arquivos": arquivos})
+            elif rota.path == "/api/sair":
                 self._json({"ok": True})
                 threading.Thread(target=self.server.shutdown,
                                  daemon=True).start()

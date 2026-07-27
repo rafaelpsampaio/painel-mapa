@@ -15,6 +15,11 @@ PARTE 1: INSTALAR NO COMPUTADOR DELA (uma vez so)
      da pasta. Mande por canal privado e apague da conversa depois.
      Alternativa sem arquivo: pular este passo; no primeiro uso o
      painel pede login por codigo e ela entra uma vez.
+  3b. (Opcional) Crie uma pasta para documentos avulsos (ex.:
+      Documentos\Demonstrativos) e configure o caminho no alto da
+      aba Financeiro do painel. Tudo que for salvo ali entra no
+      cruzamento junto com o que chega por email. A configuracao
+      fica no config.json de cada computador.
   4. De dois cliques em instalar.bat. Ele cria o atalho "Painel MAPA"
      (coracao) na area de trabalho e pergunta se deve abrir junto com
      o Windows (recomendo responder s).

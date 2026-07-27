@@ -180,6 +180,18 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   </div>
 
   <div id="aba-financeiro" class="oculto">
+    <section class="bloco">
+      <h2>Pasta local de documentos</h2>
+      <p class="nota">Além dos que chegam por email, o painel lê os
+        demonstrativos colocados nesta pasta do computador (opcional).
+        Cole o caminho e salve; deixe em branco para desativar.</p>
+      <div class="filtros">
+        <input type="text" id="cfg-pasta"
+          placeholder="Ex.: C:\Users\gisele\Documents\Demonstrativos">
+        <button onclick="salvarPasta()">Salvar</button>
+        <span class="contagem" id="cfg-status"></span>
+      </div>
+    </section>
     <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
     <div id="sec-orfaos"></div>
   </div>
@@ -549,6 +561,37 @@ function render() {
 
 for (const id of ["f-busca", "f-empresa", "f-status", "f-pag"]) {
   document.getElementById(id).addEventListener("input", renderExames);
+}
+
+async function carregarConfig() {
+  try {
+    const c = await (await fetch("/api/config")).json();
+    document.getElementById("cfg-pasta").value = c.pasta_documentos || "";
+    document.getElementById("cfg-status").textContent = c.pasta_documentos
+      ? "lendo " + c.arquivos + " arquivo(s) desta pasta"
+      : "nenhuma pasta configurada";
+  } catch (e) { /* sem servidor ainda */ }
+}
+carregarConfig();
+
+async function salvarPasta() {
+  const pasta = document.getElementById("cfg-pasta").value.trim();
+  const r = await fetch("/api/config", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({pasta_documentos: pasta})
+  });
+  const resp = await r.json();
+  if (!resp.ok) {
+    document.getElementById("cfg-status").textContent =
+      resp.erro || "não deu certo";
+    return;
+  }
+  document.getElementById("cfg-status").textContent = pasta
+    ? "salvo: lendo " + resp.arquivos + " arquivo(s). Clique em " +
+      "Atualizar para recruzar os dados."
+    : "pasta desativada";
+  carregarFinanceiro();
 }
 
 function verFaltando() {

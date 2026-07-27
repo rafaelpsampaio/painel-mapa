@@ -12,6 +12,7 @@ Uso:  py ler_repasses.py
 """
 
 import glob
+import json
 import os
 import re
 
@@ -19,6 +20,17 @@ import openpyxl
 from pypdf import PdfReader
 
 PASTA = "amostras"
+ARQ_CONFIG_LOCAL = "config.json"
+
+
+def pasta_documentos():
+    """Pasta local extra definida pelo usuario (config.json), se valida."""
+    try:
+        with open(ARQ_CONFIG_LOCAL, "r", encoding="utf-8-sig") as f:
+            p = (json.load(f).get("pasta_documentos") or "").strip()
+        return p if p and os.path.isdir(p) else None
+    except (OSError, ValueError):
+        return None
 
 
 def texto_pdf(caminho):
@@ -140,10 +152,15 @@ def processar_cardiopro(caminho):
 
 
 def pastas_padrao():
-    """repasses/ e a pasta oficial; amostras/ so como reserva se vazia."""
+    """repasses/ (email) + pasta local do usuario; amostras/ como reserva."""
     if glob.glob(os.path.join("repasses", "*")):
-        return ("repasses",)
-    return ("amostras",)
+        base = ("repasses",)
+    else:
+        base = ("amostras",)
+    extra = pasta_documentos()
+    if extra:
+        base = base + (extra,)
+    return base
 
 
 def coletar(pastas=None):

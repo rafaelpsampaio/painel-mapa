@@ -5,6 +5,7 @@ update_token.txt
 .env.txt
 baixas.txt
 .versao
+config.json
 
 # dados baixados/gerados localmente
 relatorios/
