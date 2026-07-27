@@ -49,14 +49,12 @@ SE PEDIR PARA ENTRAR NA CONTA (acesso expirado)
 
 ATUALIZACOES AUTOMATICAS
   O codigo do painel mora em github.com/rafaelpsampaio/painel-mapa
-  (repositorio privado). Toda vez que o painel abre, ele verifica se
-  ha versao nova e se atualiza sozinho antes de iniciar; sem internet,
-  abre a versao atual. Dados locais (baixas, tokens, repasses,
-  relatorios) nunca sao tocados pela atualizacao.
-  - Neste computador precisa existir o arquivo update_token.txt com um
-    token de leitura do repositorio (o Rafael gera em github.com >
-    Settings > Developer settings > Fine-grained tokens, acesso apenas
-    a esse repositorio, permissao Contents: Read).
+  (repositorio publico; so o CODIGO fica la, nunca dados ou senhas).
+  Toda vez que o painel abre, ele verifica se ha versao nova e se
+  atualiza sozinho antes de iniciar; sem internet, abre a versao
+  atual. Nao precisa de nenhuma configuracao ou senha para isso.
+  Dados locais (baixas, tokens, repasses, relatorios) nunca sao
+  tocados pela atualizacao.
   - Em maquina de desenvolvimento (com pasta .git), a atualizacao
     automatica e pulada; quem manda e o git.
 
