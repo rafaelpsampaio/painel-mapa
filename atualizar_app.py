@@ -36,6 +36,9 @@ def _req(url, token):
 
 def verificar():
     """Retorna string descrevendo o resultado (para log)."""
+    if os.path.isdir(os.path.join(PASTA, ".git")):
+        # maquina de desenvolvimento: quem manda e o git, nao o updater
+        return "maquina de desenvolvimento (.git presente): pulado"
     with open(ARQ_CONFIG, "r", encoding="utf-8") as f:
         cfg = json.load(f)
     repo = cfg["repo"]
