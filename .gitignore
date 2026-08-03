@@ -11,8 +11,10 @@ config.json
 relatorios/
 repasses/
 amostras/
+documentos/
 relatorio_*.txt
 painel.ico
+cache_pdf.json
 
 # python
 __pycache__/

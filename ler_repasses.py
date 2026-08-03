@@ -33,8 +33,38 @@ def pasta_documentos():
         return None
 
 
+ARQ_CACHE_PDF = "cache_pdf.json"
+_cache_pdf = None
+
+
+def _cache_pdf_carregado():
+    global _cache_pdf
+    if _cache_pdf is None:
+        try:
+            with open(ARQ_CACHE_PDF, "r", encoding="utf-8") as f:
+                _cache_pdf = json.load(f)
+        except (OSError, ValueError):
+            _cache_pdf = {}
+    return _cache_pdf
+
+
 def texto_pdf(caminho):
-    return "\n".join(p.extract_text() or "" for p in PdfReader(caminho).pages)
+    """Texto extraido do PDF, com cache em disco por caminho+tamanho+mtime.
+    Os PDFs de repasse/exames sao grandes (as vezes 200+ paginas) e imutaveis
+    depois de baixados, e o mesmo arquivo e lido varias vezes por carregamento
+    (financeiro, cruzamento de pagamentos, etc.), entao vale a pena persistir."""
+    cache = _cache_pdf_carregado()
+    stat = os.stat(caminho)
+    chave = os.path.abspath(caminho)
+    assinatura = [stat.st_mtime, stat.st_size]
+    entrada = cache.get(chave)
+    if entrada and entrada.get("assinatura") == assinatura:
+        return entrada["texto"]
+    texto = "\n".join(p.extract_text() or "" for p in PdfReader(caminho).pages)
+    cache[chave] = {"assinatura": assinatura, "texto": texto}
+    with open(ARQ_CACHE_PDF, "w", encoding="utf-8") as f:
+        json.dump(cache, f)
+    return texto
 
 
 def dinheiro(s):
@@ -130,6 +160,97 @@ def _valor_na_linha(txt, chave):
     return None
 
 
+# ------------------------------------------------------- IDS Exames/Laudos
+SETOR_EXAME_LISTAGEM = {
+    "ECG": "ELETROCARDIOGRAMA IDS",
+    "ELETROCARDIOGRAMA": "ELETROCARDIOGRAMA",
+    "HONORARIO MEDICO": "LAUDO STRESS FARMACOLOGICO",
+    "TESTE ERGOMETRICO": "TESTE ERGOMETRICO",
+    "TESTE ERGOMETRICO MIBI": "TESTE ERGOMETRICO MIBI",
+}
+
+_FLAG = r"(?:N\s*ã\s*o|S\s*i\s*m)"
+LINHA_LISTAGEM_RE = re.compile(
+    r"^(?P<data>\d{2}/\d{2}/\d{4})\s+(?P<req>\d+)\s+(?P<pac>\d+)\s+(?P<meio>.+?)\s+"
+    rf"(?P<f_ditado>{_FLAG})\s+(?P<f_digitado>{_FLAG})\s+(?P<f_impresso>{_FLAG})\s+"
+    rf"(?P<f_assinado>{_FLAG})\s+(?P<f_liberado>{_FLAG})\s+(?P<f_entregue>{_FLAG})\s+"
+    r"(?P<data_externa>\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2})\s+"
+    r"(?P<data_interna>\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2})\s*$"
+)
+
+
+def _norm_flag(s):
+    """Sim/Nao, tirando espacos que a extracao do PDF as vezes insere no meio."""
+    return re.sub(r"\s+", "", s)
+
+
+def _regex_tolerante(texto):
+    """Regex que casa 'texto' mesmo com espacos extras inseridos no meio das palavras."""
+    partes = []
+    for c in texto:
+        partes.append(r"\s+" if c == " " else re.escape(c) + r"\s*")
+    return "".join(partes)
+
+
+def _data_iso(data_br):
+    d, m, a = data_br.split("/")
+    return f"{a}-{m}-{d}"
+
+
+def processar_listagem_exames(caminho):
+    """Le a Listagem de Exames/Laudos da IDS: exames realizados com status do laudo
+    (Ditado/Digitado/Impresso/Assinado/Liberado/Entregue), agrupados por setor."""
+    txt = texto_pdf(caminho)
+    if "Listagem de Exames" not in txt or "Laudos" not in txt:
+        return None
+    resumo = {"tipo": "IDS - Listagem de Exames/Laudos",
+              "arquivo": os.path.basename(caminho), "setores": [], "exames": []}
+    m = re.search(r"Per.odo de (\d{2}/\d{2}/\d{4}) at. (\d{2}/\d{2}/\d{4})", txt)
+    if m:
+        resumo["periodo"] = f"{m.group(1)} a {m.group(2)}"
+    m = re.search(r"Data: (\d{2}/\d{2}/\d{4})", txt)
+    if m:
+        resumo["emitido_em"] = m.group(1)
+    setor_atual = None
+    contagem = {}
+    for linha in txt.splitlines():
+        linha = linha.strip()
+        m = re.match(r"Setor: (?!Selecionado)(.+)", linha)
+        if m:
+            setor_atual = m.group(1).strip()
+            contagem.setdefault(setor_atual, {"total": 0, "laudado": 0, "pendente": 0})
+            continue
+        m = LINHA_LISTAGEM_RE.match(linha)
+        if not m or not setor_atual:
+            continue
+        assinado = _norm_flag(m.group("f_assinado"))
+        nome = m.group("meio")
+        exame_canonico = SETOR_EXAME_LISTAGEM.get(setor_atual)
+        if exame_canonico:
+            nome = re.sub(_regex_tolerante(exame_canonico) + r"$", "", nome).strip()
+        resumo["exames"].append({
+            "data": _data_iso(m.group("data")),
+            "requisicao": m.group("req"),
+            "paciente_codigo": m.group("pac"),
+            "paciente": nome.title(),
+            "setor": setor_atual,
+            "ditado": _norm_flag(m.group("f_ditado")),
+            "digitado": _norm_flag(m.group("f_digitado")),
+            "impresso": _norm_flag(m.group("f_impresso")),
+            "assinado": assinado,
+            "liberado": _norm_flag(m.group("f_liberado")),
+            "entregue": _norm_flag(m.group("f_entregue")),
+        })
+        c = contagem[setor_atual]
+        c["total"] += 1
+        c["laudado" if assinado == "Sim" else "pendente"] += 1
+    resumo["setores"] = [{"setor": s, **v} for s, v in contagem.items()]
+    m = re.search(r"Total Geral de Exames: (\d+)", txt)
+    if m:
+        resumo["total"] = int(m.group(1))
+    return resumo
+
+
 # ---------------------------------------------------------------- CardioPro
 def processar_cardiopro(caminho):
     wb = openpyxl.load_workbook(caminho, data_only=True)
@@ -176,7 +297,8 @@ def coletar(pastas=None):
                 continue
             try:
                 if nome.endswith(".pdf"):
-                    r = processar_ids(caminho) or processar_unimed(caminho)
+                    r = (processar_ids(caminho) or processar_unimed(caminho)
+                         or processar_listagem_exames(caminho))
                 elif nome.endswith(".xlsx"):
                     r = processar_cardiopro(caminho)
                 else:
@@ -194,7 +316,7 @@ def financeiro(pastas=None):
     """Estrutura consolidada por empresa para o painel."""
     empresas = {}
     for r in coletar(pastas):
-        if r["tipo"].startswith("IDS"):
+        if r["tipo"] == "IDS - Listagem de Repasse":
             emp = empresas.setdefault("IDS", {"documentos": []})
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
@@ -205,6 +327,8 @@ def financeiro(pastas=None):
                            for s in r["setores"]],
                 "total": r.get("total"),
             })
+        elif r["tipo"] == "IDS - Listagem de Exames/Laudos":
+            pass  # coberto pela aba "Por fornecedor" (/api/realizados_fornecedor)
         elif r["tipo"].startswith("Unimed"):
             emp = empresas.setdefault("Unimed", {"documentos": []})
             emp["documentos"].append({
@@ -235,7 +359,7 @@ def main():
     for r in achados:
         print("=" * 70)
         print(f"{r['tipo']}  [{r['arquivo']}]")
-        if r["tipo"].startswith("IDS"):
+        if r["tipo"] == "IDS - Listagem de Repasse":
             soma_q = soma_v = 0
             for s in r["setores"]:
                 print(f"  {s['unidade']:22s} {s['setor']:28s} "
@@ -249,6 +373,17 @@ def main():
                 print(f"  TOTAL DO DOCUMENTO: {r['total']['qtd']} exames "
                       f"R$ {r['total']['valor']:,.2f}  "
                       f"[conferencia soma dos setores: {ok}]")
+        elif r["tipo"] == "IDS - Listagem de Exames/Laudos":
+            print(f"  Periodo: {r.get('periodo', '?')}   "
+                  f"Emitido: {r.get('emitido_em', '?')}")
+            soma = 0
+            for s in r["setores"]:
+                print(f"  {s['setor']:24s} total {s['total']:4d}  "
+                      f"laudados {s['laudado']:4d}  pendentes {s['pendente']:4d}")
+                soma += s["total"]
+            ok = "OK" if soma == r.get("total") else "DIVERGENTE"
+            print(f"  TOTAL GERAL: {r.get('total')} exames  "
+                  f"[conferencia soma dos setores: {ok}]")
         elif r["tipo"].startswith("Unimed"):
             print(f"  Periodo: {r.get('periodo', '?')}")
             for e in r["executantes"]:

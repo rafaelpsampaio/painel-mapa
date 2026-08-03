@@ -87,6 +87,73 @@
                     background: #c62828; color: #fff; text-align: center;
                     padding: 12px 16px; font-size: 17px; }
   .nota { color: #667; font-size: 14px; margin: 6px 0; }
+
+  .segmentado { display: inline-flex; background: #f4f6f8; border-radius: 9px;
+    padding: 3px; margin-bottom: 16px; gap: 2px; }
+  .segmentado button { border: none; background: transparent; font-size: 14.5px;
+    padding: 8px 16px; border-radius: 7px; cursor: pointer; color: #667;
+    font-family: inherit; }
+  .segmentado button.ativa { background: #fff; color: #223; font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+
+  .grade-meses-fin { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 14px; }
+  .mes-card-fin { border: 1px solid #e1e0d9; border-radius: 10px; padding: 14px 16px; }
+  .mes-card-fin h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em;
+    color: #667; font-weight: 600; margin: 0 0 12px; }
+  .funil-linha { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .funil-rot { width: 74px; font-size: 12.5px; color: #667; flex-shrink: 0; }
+  .funil-trilho { flex: 1; background: #e1e0d9; border-radius: 3px; height: 16px;
+    position: relative; overflow: hidden; }
+  .funil-barra { display: block; height: 100%; border-radius: 3px; }
+  .funil-num { width: 40px; text-align: right; font-size: 13px; font-weight: 600;
+    font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .divisor { height: 1px; background: #e1e0d9; margin: 14px 0 12px; }
+  .pago-rot { font-size: 12.5px; color: #667; margin-bottom: 6px;
+    display: flex; justify-content: space-between; }
+  .pago-rot b { color: #223; font-variant-numeric: tabular-nums; }
+  .barra-empilhada { display: flex; height: 22px; border-radius: 4px; overflow: hidden;
+    background: #e1e0d9; }
+  .seg { height: 100%; cursor: default; border-right: 2px solid #fff; }
+  .seg:last-child { border-right: none; }
+  .seg:hover { filter: brightness(1.12); }
+
+  .fornecedor-cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+    margin-bottom: 20px; }
+  .badge-alerta { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px;
+    font-weight: 600; color: #b24a2c; background: #fbe6dd; padding: 6px 12px;
+    border-radius: 20px; }
+  .badge-alerta::before { content: "!"; display: inline-flex; align-items: center;
+    justify-content: center; width: 16px; height: 16px; border-radius: 50%;
+    background: #c25b39; color: #fff; font-size: 11px; font-weight: 800; }
+
+  .grade-donuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 18px 10px; text-align: center; }
+  .mes-donut .rot-mes { font-size: 12px; color: #667; font-weight: 600; margin-bottom: 8px; }
+  .mes-donut .donut-wrap { position: relative; width: 104px; height: 104px; margin: 0 auto; }
+  .mes-donut .donut-wrap svg circle.fatia { cursor: default; }
+  .mes-donut .donut-wrap svg circle.fatia:hover { filter: brightness(1.15); }
+  .mes-donut .donut-centro { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; }
+  .mes-donut .donut-centro b { font-size: 19px; font-variant-numeric: tabular-nums; line-height: 1; }
+  .mes-donut .donut-centro small { font-size: 10px; color: #99a; margin-top: 2px; }
+  .mes-donut .rot-fornecedor { margin-top: 8px; font-size: 13px; font-weight: 700;
+    font-variant-numeric: tabular-nums; }
+  .mes-donut .rot-valor { font-size: 11.5px; color: #99a;
+    font-variant-numeric: tabular-nums; margin-top: 1px; }
+
+  .legenda { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 18px;
+    padding-top: 16px; border-top: 1px solid #e1e0d9; font-size: 13.5px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 7px; color: #667; }
+  .ponto { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .tooltip-fin { position: fixed; pointer-events: none; background: #223;
+    color: #fff; font-size: 13px; padding: 7px 11px; border-radius: 7px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25); opacity: 0; transform: translateY(4px);
+    transition: opacity .1s, transform .1s; z-index: 20; white-space: nowrap; }
+  .tooltip-fin.on { opacity: 1; transform: translateY(0); }
+  .tooltip-fin .tt-conv { font-weight: 700; }
+  .tooltip-fin .tt-val { opacity: .75; margin-left: 6px; }
 </style>
 </head>
 <body>
@@ -193,8 +260,43 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       </div>
     </section>
     <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
+
+    <section class="bloco">
+      <div class="segmentado">
+        <button class="ativa" id="btn-vista-mes-fin" onclick="mostrarVistaFornecedor('mes')">Por mês</button>
+        <button id="btn-vista-fornecedor-fin" onclick="mostrarVistaFornecedor('fornecedor')">Por fornecedor</button>
+      </div>
+
+      <div id="vista-mes-fin">
+        <h2>Exames por mês, produção e pagamento por convênio</h2>
+        <p class="nota">Realizado (Listagem de Exames/Laudos) &rarr; Laudado (Assinado) &rarr;
+          Pago (casado com o repasse, por convênio). O convênio só é conhecido quando o
+          pagamento casa, então a quebra por fornecedor é só na etapa Pago.</p>
+        <div class="grade-meses-fin" id="grade-meses-fin"><p class="nota">Carregando&hellip;</p></div>
+        <div class="legenda" id="legenda-meses-fin"></div>
+      </div>
+
+      <div id="vista-fornecedor-fin" class="oculto">
+        <h2>Um fornecedor, mês a mês</h2>
+        <p class="nota">Só desse fornecedor: quanto foi pedido, quanto foi laudado aguardando
+          pagamento, e quanto já foi pago. Pedido/laudado são estimados pela participação
+          média do fornecedor nos pagamentos já identificados &mdash; a Listagem de
+          Exames/Laudos não traz convênio, só descobrimos quem é o fornecedor quando o
+          pagamento casa.</p>
+        <div class="fornecedor-cabeca">
+          <label>Fornecedor
+            <select id="sel-fornecedor-fin" onchange="renderFornecedorFinanceiro()"></select>
+          </label>
+          <span id="badge-fornecedor-fin"></span>
+        </div>
+        <div class="grade-donuts" id="grafico-fornecedor-fin"></div>
+        <div class="legenda" id="legenda-fornecedor-fin"></div>
+      </div>
+    </section>
+
     <div id="sec-orfaos"></div>
   </div>
+  <div class="tooltip-fin" id="tooltip-fin"></div>
 
   <p class="rodape">Somente leitura da caixa controlemapa@hotmail.com.
      Baixas manuais ficam registradas no arquivo baixas.txt.</p>
@@ -592,6 +694,7 @@ async function salvarPasta() {
       "Atualizar para recruzar os dados."
     : "pasta desativada";
   carregarFinanceiro();
+  carregarRealizadosFornecedor();
 }
 
 function verFaltando() {
@@ -636,7 +739,7 @@ async function carregarFinanceiro() {
               "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
               .join("") + "</table>";
         }
-        if (doc.total) {
+        if (doc.total && doc.total.qtd) {
           h += "<p><b>Total do documento: " + doc.total.qtd + " exames · " +
             brlSeguro(doc.total.valor) + "</b></p>";
         }
@@ -657,6 +760,191 @@ async function carregarFinanceiro() {
   }
 }
 carregarFinanceiro();
+
+const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
+const COR_OUTROS = "#8f8c81";
+const COR_SEM_LAUDO = "#e8dcc0";
+const MESES_NOME = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+
+function formatMes(ym) {
+  const [ano, mes] = ym.split("-");
+  return MESES_NOME[parseInt(mes, 10) - 1] + "/" + ano.slice(2);
+}
+
+function montarDonutFin(total, fatias, size, largura) {
+  if (!total) {
+    return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size + "'>" +
+      "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + (size - largura) / 2 +
+      "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/></svg>";
+  }
+  const r = (size - largura) / 2;
+  const circ = 2 * Math.PI * r;
+  let acumulado = 0;
+  const arcos = fatias.filter(fa => fa.val > 0).map(fa => {
+    const frac = fa.val / total;
+    const comprimento = frac * circ;
+    const offset = -acumulado;
+    acumulado += comprimento;
+    return "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + r + "' fill='none' stroke='" +
+      fa.cor + "' stroke-width='" + largura + "' stroke-dasharray='" + comprimento + " " +
+      (circ - comprimento) + "' stroke-dashoffset='" + offset + "' class='fatia' " +
+      "data-nome=\"" + esc(fa.nome) + "\" data-val='" + fa.val + "' data-pct='" +
+      (frac * 100).toFixed(0) + "'" +
+      (fa.valor ? " data-valor=\"" + esc(brl(fa.valor)) + "\"" : "") + "/>";
+  }).join("");
+  return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size +
+    "' style='transform:rotate(-90deg)'><circle cx='" + size / 2 + "' cy='" + size / 2 +
+    "' r='" + r + "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/>" +
+    arcos + "</svg>";
+}
+
+let dadosRealizadosFornecedor = null;
+
+function mostrarVistaFornecedor(nome) {
+  document.getElementById("vista-mes-fin").classList.toggle("oculto", nome !== "mes");
+  document.getElementById("vista-fornecedor-fin").classList.toggle("oculto", nome !== "fornecedor");
+  document.getElementById("btn-vista-mes-fin").classList.toggle("ativa", nome === "mes");
+  document.getElementById("btn-vista-fornecedor-fin").classList.toggle("ativa", nome === "fornecedor");
+}
+
+async function carregarRealizadosFornecedor() {
+  try {
+    dadosRealizadosFornecedor = await (await fetch("/api/realizados_fornecedor")).json();
+  } catch (e) {
+    document.getElementById("grade-meses-fin").innerHTML =
+      "<p class='nota'>Não consegui cruzar exames realizados com pagamentos.</p>";
+    return;
+  }
+  renderMesesFornecedor();
+  const sel = document.getElementById("sel-fornecedor-fin");
+  sel.innerHTML = dadosRealizadosFornecedor.fornecedores.map(f =>
+    "<option value=\"" + esc(f.nome) + "\">" + esc(f.nome) + "</option>").join("");
+  renderFornecedorFinanceiro();
+}
+
+function renderMesesFornecedor() {
+  const d = dadosRealizadosFornecedor;
+  const grade = document.getElementById("grade-meses-fin");
+  if (!d || !d.meses.length) {
+    grade.innerHTML = "<p class='nota'>Nenhum exame na Listagem de Exames/Laudos ainda.</p>";
+    return;
+  }
+  const principais = d.fornecedores.slice(0, 6);
+  const cores = {};
+  principais.forEach((f, i) => { cores[f.nome] = PALETA_FORNECEDOR[i]; });
+
+  grade.innerHTML = d.meses.map(m => {
+    const porNome = m.por_fornecedor;
+    let outrosQtd = 0;
+    Object.keys(porNome).forEach(nome => {
+      if (!cores[nome]) outrosQtd += porNome[nome].qtd;
+    });
+    const fatias = principais
+      .map(f => ({ nome: f.nome, cor: cores[f.nome], val: (porNome[f.nome] || {}).qtd || 0 }))
+      .concat([{ nome: "Outros", cor: COR_OUTROS, val: outrosQtd }]);
+    const barra = fatias.filter(fa => fa.val > 0).map(fa => {
+      const pct = 100 * fa.val / (m.pago_total || 1);
+      return "<div class='seg' data-conv=\"" + esc(fa.nome) + "\" data-val='" + fa.val +
+        "' data-pct='" + pct.toFixed(0) + "' style='width:" + pct + "%;background:" + fa.cor +
+        "'></div>";
+    }).join("");
+    return "<div class='mes-card-fin'><h3>" + formatMes(m.mes) + "</h3>" +
+      "<div class='funil-linha'><span class='funil-rot'>Realizados</span>" +
+      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:#2a78d6'></span></span>" +
+      "<span class='funil-num'>" + m.realizados + "</span></div>" +
+      "<div class='funil-linha'><span class='funil-rot'>Laudados</span>" +
+      "<span class='funil-trilho'><span class='funil-barra' style='width:" +
+      (100 * m.laudados / m.realizados) + "%;background:#5598e7'></span></span>" +
+      "<span class='funil-num'>" + m.laudados + "</span></div>" +
+      "<div class='funil-linha'><span class='funil-rot'>Pagos</span>" +
+      "<span class='funil-trilho'><span class='funil-barra' style='width:" +
+      (100 * m.pago_total / m.realizados) + "%;background:#86b6ef'></span></span>" +
+      "<span class='funil-num'>" + m.pago_total + "</span></div>" +
+      "<div class='divisor'></div>" +
+      "<div class='pago-rot'><span>Pago por convênio</span><b>" + m.pago_total + " de " +
+      m.laudados + "</b></div>" +
+      "<div class='barra-empilhada'>" + barra + "</div></div>";
+  }).join("");
+
+  document.getElementById("legenda-meses-fin").innerHTML =
+    principais.map(f => "<span><span class='ponto' style='background:" + cores[f.nome] +
+      "'></span>" + esc(f.nome) + "</span>").join("") +
+    "<span><span class='ponto' style='background:" + COR_OUTROS + "'></span>Outros</span>";
+}
+
+function renderFornecedorFinanceiro() {
+  const d = dadosRealizadosFornecedor;
+  const nome = document.getElementById("sel-fornecedor-fin").value;
+  const f = d.fornecedores.find(x => x.nome === nome);
+  if (!f) { document.getElementById("grafico-fornecedor-fin").innerHTML = ""; return; }
+
+  const cor = PALETA_FORNECEDOR[d.fornecedores.indexOf(f) % PALETA_FORNECEDOR.length];
+  const participacao = f.participacao;
+
+  document.getElementById("grafico-fornecedor-fin").innerHTML = d.meses.map(m => {
+    const pago = (m.por_fornecedor[nome] || {}).qtd || 0;
+    const valor = (m.por_fornecedor[nome] || {}).valor || 0;
+    const pedidosEst = Math.round(participacao * m.realizados);
+    const laudadosEst = Math.round(participacao * m.laudados);
+    const soPedido = Math.max(0, pedidosEst - laudadosEst);
+    const laudadoSemPagar = Math.max(0, laudadosEst - pago);
+    const total = Math.max(pedidosEst, soPedido + laudadoSemPagar + pago);
+    const donut = montarDonutFin(total, [
+      { nome: "Pago", cor: cor, val: pago, valor: valor },
+      { nome: "Laudado, aguardando pagamento", cor: COR_OUTROS, val: laudadoSemPagar },
+      { nome: "Só pedido, sem laudo ainda", cor: COR_SEM_LAUDO, val: soPedido },
+    ], 104, 16);
+    return "<div class='mes-donut'><div class='rot-mes'>" + formatMes(m.mes) + "</div>" +
+      "<div class='donut-wrap'>" + donut + "<div class='donut-centro'><b>" + total +
+      "</b><small>pedidos (est.)</small></div></div>" +
+      "<div class='rot-fornecedor' style='color:" + cor + "'>" + pago +
+      " pago" + (pago === 1 ? "" : "s") + "</div>" +
+      "<div class='rot-valor'>" + brl(valor) + "</div></div>";
+  }).join("");
+
+  document.getElementById("legenda-fornecedor-fin").innerHTML =
+    "<span><span class='ponto' style='background:" + cor + "'></span>Pago</span>" +
+    "<span><span class='ponto' style='background:" + COR_OUTROS +
+    "'></span>Laudado, aguardando pagamento</span>" +
+    "<span><span class='ponto' style='background:" + COR_SEM_LAUDO +
+    "'></span>Só pedido, sem laudo ainda</span>";
+
+  let ultimoComPagamento = -1;
+  d.meses.forEach((m, i) => { if ((m.por_fornecedor[nome] || {}).qtd) ultimoComPagamento = i; });
+  const mesesSemPagar = d.meses.length - 1 - ultimoComPagamento;
+  const badge = document.getElementById("badge-fornecedor-fin");
+  badge.innerHTML = (ultimoComPagamento >= 0 && mesesSemPagar >= 3)
+    ? "<span class='badge-alerta'>Sem pagamento desde " + formatMes(d.meses[ultimoComPagamento].mes) +
+      " (" + mesesSemPagar + " meses)</span>"
+    : "";
+}
+
+const ttFin = document.getElementById("tooltip-fin");
+document.addEventListener("mouseover", e => {
+  const seg = e.target.closest(".seg");
+  if (seg) {
+    ttFin.innerHTML = "<span class='tt-conv'>" + esc(seg.dataset.conv) + "</span>" +
+      "<span class='tt-val'>" + seg.dataset.val + " exames &middot; " + seg.dataset.pct + "%</span>";
+    ttFin.classList.add("on");
+    return;
+  }
+  const fatia = e.target.closest(".fatia");
+  if (fatia) {
+    ttFin.innerHTML = "<span class='tt-conv'>" + esc(fatia.dataset.nome) + "</span>" +
+      "<span class='tt-val'>" + fatia.dataset.val + " exames &middot; " + fatia.dataset.pct + "%" +
+      (fatia.dataset.valor ? " &middot; " + esc(fatia.dataset.valor) : "") + "</span>";
+    ttFin.classList.add("on");
+  }
+});
+document.addEventListener("mousemove", e => {
+  if (!ttFin.classList.contains("on")) return;
+  ttFin.style.left = (e.clientX + 14) + "px";
+  ttFin.style.top = (e.clientY + 14) + "px";
+});
+document.addEventListener("mouseout", e => {
+  if (e.target.closest(".seg") || e.target.closest(".fatia")) ttFin.classList.remove("on");
+});
+carregarRealizadosFornecedor();
 
 let encerrado = false;
 async function encerrar() {

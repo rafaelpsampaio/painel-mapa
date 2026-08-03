@@ -19,7 +19,9 @@ from datetime import datetime, timedelta
 import openpyxl
 
 import rotina_pendencias as rp
-from ler_repasses import texto_pdf
+from ler_repasses import (texto_pdf, dinheiro, SETOR_EXAME_LISTAGEM,
+                           _regex_tolerante, processar_listagem_exames,
+                           pastas_padrao)
 
 PASTA = "amostras"
 
@@ -37,6 +39,39 @@ COMPAT = {  # pagador -> fontes de exame que ele pode pagar
 ORDEM_PAGADOR = {"IDS": 0, "Unimed": 1, "CardioPro": 2}
 # janela de cobertura usada no alerta "sem registro", por fonte do exame
 PAGADOR_PRIMARIO = {"IDS": "IDS", "Unimed": "Unimed", "CardioPro": "Unimed"}
+
+# convenios conhecidos nos pagamentos por paciente da IDS (descobertos
+# minerando os sufixos que mais se repetem no campo "nome" -- ver memoria);
+# o nome do paciente e o convenio vem grudados no mesmo campo, sem separador.
+CONVENIO_DISPLAY = {
+    "INTERMEDICA SAUDE S.A": "Intermédica",
+    "INTERMEDICA- MEDIPLAN": "Intermédica",
+    "CARTAO IDS MATRIZ": "Cartão IDS",
+    "HAPVIDA - SOROCABA": "Hapvida",
+    "BRADESCO OPERADORA PLANOS S/A": "Bradesco Operadora",
+    "BRADESCO SAUDE": "Bradesco Saúde",
+    "CAIXA ECONOMICA FEDERAL": "Caixa Econômica Federal",
+    "SUL AMERICA": "Sul América",
+    "PORTO SEGURO": "Porto Seguro",
+    "CEPOS- EMPRESA": "Cepos",
+    "UNIMED": "Unimed",
+    "AMIL": "Amil",
+    "APAS": "Apas",
+    "CASSI": "Cassi",
+    "CABESP": "Cabesp",
+    "MARINHA": "Marinha",
+}
+_PADROES_CONVENIO = sorted(CONVENIO_DISPLAY, key=len, reverse=True)
+_PADROES_CONVENIO = [(c, re.compile(_regex_tolerante(c) + r"$")) for c in _PADROES_CONVENIO]
+
+
+def extrair_convenio(nome):
+    """Convenio (nome de exibicao) no fim do campo 'nome' de um item de
+    pagamento da IDS, ou None se nao reconhecido."""
+    for canonico, padrao in _PADROES_CONVENIO:
+        if padrao.search(nome):
+            return CONVENIO_DISPLAY[canonico]
+    return None
 
 
 def data_de(v):
@@ -72,6 +107,184 @@ def itens_ids(caminho):
                           "valor": valor,
                           "origem": os.path.basename(caminho)})
     return itens
+
+
+def itens_ids_setores(caminho):
+    """Itens de pagamento por paciente da Listagem de Repasse da IDS, para os
+    setores que NAO sao MAPA (Teste Ergometrico, MIBI, ECG, Laudo Stress...).
+    Cabecalho da tabela no PDF: Data Paciente Convenio Exame Pre-Labore Quant."""
+    txt = texto_pdf(caminho)
+    if "Listagem de Repasse" not in txt:
+        return []
+    itens = []
+    setor_atual = None
+    for linha in txt.splitlines():
+        linha = linha.strip()
+        m = re.match(r"Setor: (?!Selecionado)(.+)", linha)
+        if m:
+            setor_atual = m.group(1).strip()
+            continue
+        if not setor_atual or setor_atual == "MAPA":
+            continue
+        exame_canonico = SETOR_EXAME_LISTAGEM.get(setor_atual)
+        if not exame_canonico:
+            continue
+        padrao = (r"^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+" +
+                  _regex_tolerante(exame_canonico) +
+                  r"\s+R\s*\$\s*([\d\.]+\s*,\s*\d{2})\s+\d+\s*$")
+        m = re.match(padrao, linha)
+        if not m:
+            continue
+        nome = m.group(2).strip()
+        itens.append({
+            "empresa": "IDS", "mod": setor_atual,
+            "data": data_de(m.group(1)), "nome": nome,
+            "valor": dinheiro(re.sub(r"\s+", "", m.group(3))),
+            "origem": os.path.basename(caminho),
+            "convenio": extrair_convenio(nome),
+        })
+    return itens
+
+
+def coletar_itens_setores(pastas=None):
+    """Pagamentos por paciente dos setores nao-MAPA, deduplicados por
+    setor+nome+data (independente do coletar_itens() usado pelo MAPA)."""
+    if pastas is None:
+        pastas = pastas_padrao()
+    itens = []
+    vistos_arq = set()
+    for pasta in pastas:
+        for caminho in sorted(glob.glob(os.path.join(pasta, "*"))):
+            if not caminho.lower().endswith(".pdf"):
+                continue
+            arq = os.path.basename(caminho).lower()
+            if arq in vistos_arq:
+                continue
+            novos = itens_ids_setores(caminho)
+            if novos:
+                vistos_arq.add(arq)
+                itens.extend(novos)
+    vistos = set()
+    unicos = []
+    for p in itens:
+        if p["data"] is not None and not data_valida(p["data"]):
+            p["data"] = None
+        chave = (p["mod"], rp.normalizar(p["nome"]), p["data"])
+        if chave not in vistos:
+            vistos.add(chave)
+            unicos.append(p)
+    return unicos
+
+
+def cruzar_realizados_ids(pastas=None):
+    """Casa os exames da Listagem de Exames/Laudos (pedido + status do laudo)
+    com os pagamentos por paciente da Listagem de Repasse, por setor.
+    Devolve a lista de exames (dedup por requisicao) com 'pagamento' anotado
+    quando encontrado, ou 'pagamento_esperado' quando laudado, dentro da
+    janela de datas ja coberta pelos repasses daquele setor, e sem par."""
+    if pastas is None:
+        pastas = pastas_padrao()
+    exames = []
+    vistos_arq = set()
+    for pasta in pastas:
+        for caminho in sorted(glob.glob(os.path.join(pasta, "*"))):
+            if not caminho.lower().endswith(".pdf"):
+                continue
+            arq = os.path.basename(caminho).lower()
+            if arq in vistos_arq:
+                continue
+            r = processar_listagem_exames(caminho)
+            if r:
+                vistos_arq.add(arq)
+                exames.extend(r["exames"])
+
+    vistos_req = set()
+    unicos = []
+    for e in exames:
+        if e["requisicao"] in vistos_req:
+            continue
+        vistos_req.add(e["requisicao"])
+        unicos.append(e)
+    exames = unicos
+
+    pagamentos = coletar_itens_setores(pastas)
+    indice = {}
+    for p in pagamentos:
+        tokens = rp.normalizar(p["nome"]).split()
+        if tokens:
+            indice.setdefault((p["mod"], tokens[0]), []).append(p)
+
+    cobertura = {}
+    for p in pagamentos:
+        if p["data"]:
+            c = cobertura.setdefault(p["mod"], [p["data"], p["data"]])
+            if p["data"] < c[0]:
+                c[0] = p["data"]
+            if p["data"] > c[1]:
+                c[1] = p["data"]
+
+    usados = set()
+    for ex in exames:
+        ex_data = datetime.strptime(ex["data"], "%Y-%m-%d")
+        tokens = rp.normalizar(ex["paciente"]).split()
+        achou = None
+        for p in (indice.get((ex["setor"], tokens[0]), []) if tokens else []):
+            if id(p) in usados or not p["data"]:
+                continue
+            if abs((p["data"] - ex_data).days) > 10:
+                continue
+            if casa_nome(ex["paciente"], p["nome"]):
+                achou = p
+                break
+        if achou:
+            usados.add(id(achou))
+            ex["pagamento"] = {"data": achou["data"].strftime("%Y-%m-%d"),
+                               "valor": achou.get("valor"),
+                               "origem": achou["origem"],
+                               "convenio": achou.get("convenio")}
+        else:
+            c = cobertura.get(ex["setor"])
+            if ex["assinado"] == "Sim" and c and c[0] <= ex_data <= c[1]:
+                ex["pagamento_esperado"] = True
+    return exames
+
+
+def agregar_por_mes_fornecedor(pastas=None):
+    """Agrega os exames (realizados/laudados/pagos) por mes e, na parte paga,
+    por convenio -- para o painel mostrar producao x pagamento por fornecedor.
+    'Realizados'/'laudados' nao tem convenio (nao vem na Listagem de Exames/
+    Laudos); so a fatia paga sabe de quem e, porque so descobrimos o convenio
+    quando o pagamento casa."""
+    exames = cruzar_realizados_ids(pastas)
+    meses = {}
+    fornecedores_total = {}
+    for ex in exames:
+        mes = ex["data"][:7]
+        m = meses.setdefault(mes, {"mes": mes, "realizados": 0, "laudados": 0,
+                                    "pago_total": 0, "por_fornecedor": {}})
+        m["realizados"] += 1
+        if ex["assinado"] == "Sim":
+            m["laudados"] += 1
+        pag = ex.get("pagamento")
+        if pag:
+            m["pago_total"] += 1
+            conv = pag.get("convenio") or "Outros"
+            fc = m["por_fornecedor"].setdefault(conv, {"qtd": 0, "valor": 0})
+            fc["qtd"] += 1
+            fc["valor"] += pag.get("valor") or 0
+            ft = fornecedores_total.setdefault(conv, {"qtd": 0, "valor": 0})
+            ft["qtd"] += 1
+            ft["valor"] += pag.get("valor") or 0
+
+    total_pago_geral = sum(f["qtd"] for f in fornecedores_total.values())
+    fornecedores = [
+        {"nome": nome, "qtd": f["qtd"], "valor": f["valor"],
+         "participacao": f["qtd"] / total_pago_geral if total_pago_geral else 0}
+        for nome, f in fornecedores_total.items()
+    ]
+    fornecedores.sort(key=lambda f: -f["qtd"])
+    return {"meses": sorted(meses.values(), key=lambda m: m["mes"]),
+            "fornecedores": fornecedores}
 
 
 def itens_unimed(caminho):
