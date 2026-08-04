@@ -2,6 +2,43 @@ PAINEL MAPA
 GUIA DA DRA. GISELE
 ====================================================================
 
+COMO BAIXAR E INSTALAR (só na primeira vez)
+  Se o Rafael já deixou o programa instalado no seu computador, pule
+  direto para "COMO ABRIR". Estes passos são só para instalar do zero
+  (computador novo, ou reinstalação).
+
+  1. Instale o Python (só na primeira vez neste computador):
+     - Abra python.org/downloads e clique para baixar.
+     - Ao instalar, marque as caixinhas "Add python.exe to PATH" e
+       "py launcher" antes de clicar em Instalar.
+
+  2. Baixe o programa:
+     - Abra github.com/rafaelpsampaio/painel-mapa no navegador.
+     - Clique no botão verde "Code" e depois em "Download ZIP".
+     - O arquivo baixado é uma pasta compactada (.zip).
+
+  3. Descompacte:
+     - Ache o arquivo baixado (geralmente na pasta "Downloads").
+     - Clique com o botão direito nele e escolha "Extrair tudo...".
+     - Mova a pasta extraída para "Documentos", por exemplo.
+
+  4. Instale o atalho:
+     - Abra a pasta e dê dois cliques em "instalar.bat".
+     - Ele pergunta se o painel deve abrir sozinho com o Windows;
+       responda "s" (recomendado).
+     - Aparece o atalho "Painel MAPA" (coração) na área de trabalho.
+
+  5. Abra e entre na conta pela primeira vez:
+     - Dê dois cliques no coração "Painel MAPA".
+     - Como é a primeira vez, a tela vai pedir para entrar na conta de
+       email: ela mesma mostra um link (microsoft.com/link) e um
+       código. Abra o link, digite o código e entre com a conta
+       controlemapa@hotmail.com.
+     - O painel continua sozinho depois disso; nas próximas vezes não
+       pede mais login (só de novo se ficar muito tempo sem usar).
+
+  Pronto, instalado. O resto deste guia é o uso do dia a dia.
+
 COMO ABRIR
   1. Na area de trabalho, de dois cliques no coracao "Painel MAPA".
   2. O navegador abre sozinho. Espere cerca de 1 minuto enquanto ele
