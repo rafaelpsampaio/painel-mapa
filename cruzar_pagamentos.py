@@ -261,20 +261,38 @@ def agregar_por_mes_fornecedor(pastas=None):
     for ex in exames:
         mes = ex["data"][:7]
         m = meses.setdefault(mes, {"mes": mes, "realizados": 0, "laudados": 0,
-                                    "pago_total": 0, "por_fornecedor": {}})
+                                    "pago_total": 0, "por_fornecedor": {},
+                                    "nao_laudados": [], "laudados_sem_pagamento": []})
         m["realizados"] += 1
         if ex["assinado"] == "Sim":
             m["laudados"] += 1
+        else:
+            m["nao_laudados"].append({"paciente": ex["paciente"], "data": ex["data"],
+                                       "setor": ex["setor"]})
         pag = ex.get("pagamento")
         if pag:
             m["pago_total"] += 1
             conv = pag.get("convenio") or "Outros"
-            fc = m["por_fornecedor"].setdefault(conv, {"qtd": 0, "valor": 0})
+            fc = m["por_fornecedor"].setdefault(
+                conv, {"qtd": 0, "valor": 0, "transacoes": []})
             fc["qtd"] += 1
             fc["valor"] += pag.get("valor") or 0
+            fc["transacoes"].append({
+                "paciente": ex["paciente"],
+                "data": ex["data"],
+                "setor": ex["setor"],
+                "valor": pag.get("valor"),
+                "data_pagamento": pag.get("data"),
+                "origem": pag.get("origem"),
+            })
             ft = fornecedores_total.setdefault(conv, {"qtd": 0, "valor": 0})
             ft["qtd"] += 1
             ft["valor"] += pag.get("valor") or 0
+        elif ex["assinado"] == "Sim":
+            m["laudados_sem_pagamento"].append({
+                "paciente": ex["paciente"], "data": ex["data"], "setor": ex["setor"],
+                "esperado": bool(ex.get("pagamento_esperado")),
+            })
 
     total_pago_geral = sum(f["qtd"] for f in fornecedores_total.values())
     fornecedores = [

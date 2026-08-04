@@ -114,7 +114,7 @@
   .pago-rot b { color: #223; font-variant-numeric: tabular-nums; }
   .barra-empilhada { display: flex; height: 22px; border-radius: 4px; overflow: hidden;
     background: #e1e0d9; }
-  .seg { height: 100%; cursor: default; border-right: 2px solid #fff; }
+  .seg { height: 100%; cursor: pointer; border-right: 2px solid #fff; }
   .seg:last-child { border-right: none; }
   .seg:hover { filter: brightness(1.12); }
 
@@ -131,10 +131,10 @@
     gap: 18px 10px; text-align: center; }
   .mes-donut .rot-mes { font-size: 12px; color: #667; font-weight: 600; margin-bottom: 8px; }
   .mes-donut .donut-wrap { position: relative; width: 104px; height: 104px; margin: 0 auto; }
-  .mes-donut .donut-wrap svg circle.fatia { cursor: default; }
+  .mes-donut .donut-wrap svg circle.fatia { cursor: pointer; }
   .mes-donut .donut-wrap svg circle.fatia:hover { filter: brightness(1.15); }
   .mes-donut .donut-centro { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; }
+    align-items: center; justify-content: center; pointer-events: none; }
   .mes-donut .donut-centro b { font-size: 19px; font-variant-numeric: tabular-nums; line-height: 1; }
   .mes-donut .donut-centro small { font-size: 10px; color: #99a; margin-top: 2px; }
   .mes-donut .rot-fornecedor { margin-top: 8px; font-size: 13px; font-weight: 700;
@@ -154,6 +154,14 @@
   .tooltip-fin.on { opacity: 1; transform: translateY(0); }
   .tooltip-fin .tt-conv { font-weight: 700; }
   .tooltip-fin .tt-val { opacity: .75; margin-left: 6px; }
+
+  .transacoes-cabeca { display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .transacoes-cabeca h2 { margin: 0; }
+  .transacoes-cabeca button { border: 1px solid #dcdad0; background: #fff; color: #667;
+    border-radius: 7px; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 13.5px; }
+  #transacoes-corpo-fin { overflow-x: auto; }
+  #transacoes-corpo-fin td.muted { color: #99a; font-size: 12.5px; }
 </style>
 </head>
 <body>
@@ -180,6 +188,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   <button id="aba-btn-geral" class="ativa" onclick="mostraAba('geral')">Visão geral</button>
   <button id="aba-btn-exames" onclick="mostraAba('exames')">Exames</button>
   <button id="aba-btn-financeiro" onclick="mostraAba('financeiro')">Financeiro</button>
+  <button id="aba-btn-analises" onclick="mostraAba('analises')">Análises</button>
 </nav>
 
 <div class="tela" id="carregando">
@@ -261,13 +270,17 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
     </section>
     <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
 
+    <div id="sec-orfaos"></div>
+  </div>
+
+  <div id="aba-analises" class="oculto">
     <section class="bloco">
       <div class="segmentado">
-        <button class="ativa" id="btn-vista-mes-fin" onclick="mostrarVistaFornecedor('mes')">Por mês</button>
-        <button id="btn-vista-fornecedor-fin" onclick="mostrarVistaFornecedor('fornecedor')">Por fornecedor</button>
+        <button id="btn-vista-mes-fin" onclick="mostrarVistaFornecedor('mes')">Por mês</button>
+        <button class="ativa" id="btn-vista-fornecedor-fin" onclick="mostrarVistaFornecedor('fornecedor')">Por fornecedor</button>
       </div>
 
-      <div id="vista-mes-fin">
+      <div id="vista-mes-fin" class="oculto">
         <h2>Exames por mês, produção e pagamento por convênio</h2>
         <p class="nota">Realizado (Listagem de Exames/Laudos) &rarr; Laudado (Assinado) &rarr;
           Pago (casado com o repasse, por convênio). O convênio só é conhecido quando o
@@ -276,12 +289,12 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
         <div class="legenda" id="legenda-meses-fin"></div>
       </div>
 
-      <div id="vista-fornecedor-fin" class="oculto">
+      <div id="vista-fornecedor-fin">
         <h2>Um fornecedor, mês a mês</h2>
         <p class="nota">Só desse fornecedor: quanto foi pedido, quanto foi laudado aguardando
           pagamento, e quanto já foi pago. Pedido/laudado são estimados pela participação
-          média do fornecedor nos pagamentos já identificados &mdash; a Listagem de
-          Exames/Laudos não traz convênio, só descobrimos quem é o fornecedor quando o
+          média do fornecedor nos pagamentos já identificados, já que a Listagem de
+          Exames/Laudos não traz convênio: só descobrimos quem é o fornecedor quando o
           pagamento casa.</p>
         <div class="fornecedor-cabeca">
           <label>Fornecedor
@@ -294,7 +307,13 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       </div>
     </section>
 
-    <div id="sec-orfaos"></div>
+    <section class="bloco oculto" id="bloco-transacoes-fin">
+      <div class="transacoes-cabeca">
+        <h2 id="transacoes-titulo-fin"></h2>
+        <button onclick="document.getElementById('bloco-transacoes-fin').classList.add('oculto')">Fechar</button>
+      </div>
+      <div id="transacoes-corpo-fin"></div>
+    </section>
   </div>
   <div class="tooltip-fin" id="tooltip-fin"></div>
 
@@ -329,7 +348,7 @@ function mostrar(id) {
     document.getElementById(t).classList.toggle("oculto", t !== id);
 }
 function mostraAba(nome) {
-  for (const a of ["geral", "exames", "financeiro"]) {
+  for (const a of ["geral", "exames", "financeiro", "analises"]) {
     document.getElementById("aba-" + a).classList.toggle("oculto", a !== nome);
     document.getElementById("aba-btn-" + a).classList.toggle("ativa", a === nome);
   }
@@ -848,7 +867,7 @@ function renderMesesFornecedor() {
         "' data-pct='" + pct.toFixed(0) + "' style='width:" + pct + "%;background:" + fa.cor +
         "'></div>";
     }).join("");
-    return "<div class='mes-card-fin'><h3>" + formatMes(m.mes) + "</h3>" +
+    return "<div class='mes-card-fin' data-mes=\"" + m.mes + "\"><h3>" + formatMes(m.mes) + "</h3>" +
       "<div class='funil-linha'><span class='funil-rot'>Realizados</span>" +
       "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:#2a78d6'></span></span>" +
       "<span class='funil-num'>" + m.realizados + "</span></div>" +
@@ -894,7 +913,7 @@ function renderFornecedorFinanceiro() {
       { nome: "Laudado, aguardando pagamento", cor: COR_OUTROS, val: laudadoSemPagar },
       { nome: "Só pedido, sem laudo ainda", cor: COR_SEM_LAUDO, val: soPedido },
     ], 104, 16);
-    return "<div class='mes-donut'><div class='rot-mes'>" + formatMes(m.mes) + "</div>" +
+    return "<div class='mes-donut' data-mes=\"" + m.mes + "\"><div class='rot-mes'>" + formatMes(m.mes) + "</div>" +
       "<div class='donut-wrap'>" + donut + "<div class='donut-centro'><b>" + total +
       "</b><small>pedidos (est.)</small></div></div>" +
       "<div class='rot-fornecedor' style='color:" + cor + "'>" + pago +
@@ -944,6 +963,88 @@ document.addEventListener("mousemove", e => {
 document.addEventListener("mouseout", e => {
   if (e.target.closest(".seg") || e.target.closest(".fatia")) ttFin.classList.remove("on");
 });
+
+function transacoesPara(mes, conv) {
+  const m = dadosRealizadosFornecedor.meses.find(x => x.mes === mes);
+  if (!m) return [];
+  if (conv === "Outros") {
+    const principais = new Set(dadosRealizadosFornecedor.fornecedores.slice(0, 6).map(f => f.nome));
+    let todas = [];
+    Object.keys(m.por_fornecedor).forEach(nome => {
+      if (!principais.has(nome)) todas = todas.concat(m.por_fornecedor[nome].transacoes || []);
+    });
+    return todas;
+  }
+  return (m.por_fornecedor[conv] || {}).transacoes || [];
+}
+
+function mostrarTransacoesFin(mes, conv, transacoes) {
+  const bloco = document.getElementById("bloco-transacoes-fin");
+  const titulo = document.getElementById("transacoes-titulo-fin");
+  const corpo = document.getElementById("transacoes-corpo-fin");
+  titulo.textContent = transacoes.length + " transaç" + (transacoes.length === 1 ? "ão" : "ões") +
+    " · " + conv + " · " + formatMes(mes);
+  if (!transacoes.length) {
+    corpo.innerHTML = "<p class='nota'>Nenhuma transação encontrada.</p>";
+  } else {
+    const linhas = transacoes.slice().sort((a, b) => a.data < b.data ? -1 : 1).map(t =>
+      "<tr><td>" + dataBr(t.data) + "</td><td>" + esc(t.paciente) + "</td><td>" + esc(t.setor) +
+      "</td><td>" + brl(t.valor) + "</td><td>" + dataBr(t.data_pagamento) + "</td>" +
+      "<td class='muted'>" + esc(t.origem) + "</td></tr>").join("");
+    corpo.innerHTML = "<table><tr><th>Data exame</th><th>Paciente</th><th>Setor</th>" +
+      "<th>Valor</th><th>Data pagamento</th><th>Arquivo</th></tr>" + linhas + "</table>";
+  }
+  bloco.classList.remove("oculto");
+  bloco.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+function mostrarExamesEstado(mes, chave, rotulo) {
+  const m = dadosRealizadosFornecedor.meses.find(x => x.mes === mes);
+  const lista = (m && m[chave]) || [];
+  const bloco = document.getElementById("bloco-transacoes-fin");
+  const titulo = document.getElementById("transacoes-titulo-fin");
+  const corpo = document.getElementById("transacoes-corpo-fin");
+  titulo.textContent = lista.length + " exame" + (lista.length === 1 ? "" : "s") +
+    " · " + rotulo + " · " + formatMes(mes);
+  if (!lista.length) {
+    corpo.innerHTML = "<p class='nota'>Nenhum exame nessa situação.</p>";
+  } else {
+    const ordenada = lista.slice().sort((a, b) => a.data < b.data ? -1 : 1);
+    const linhas = ordenada.map(x =>
+      "<tr><td>" + dataBr(x.data) + "</td><td>" + esc(x.paciente) + "</td><td>" + esc(x.setor) +
+      "</td><td>" + (x.esperado ? "<span class='badge-alerta'>fora do prazo esperado</span>" : "") +
+      "</td></tr>").join("");
+    corpo.innerHTML = "<table><tr><th>Data</th><th>Paciente</th><th>Setor</th><th></th></tr>" +
+      linhas + "</table>" +
+      "<p class='nota'>O convênio só é conhecido quando o pagamento casa, então esta lista vale " +
+      "para todos os fornecedores, não é possível filtrar só o selecionado.</p>";
+  }
+  bloco.classList.remove("oculto");
+  bloco.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+document.addEventListener("click", e => {
+  const seg = e.target.closest(".seg");
+  if (seg) {
+    const mes = seg.closest(".mes-card-fin").dataset.mes;
+    const conv = seg.dataset.conv;
+    mostrarTransacoesFin(mes, conv, transacoesPara(mes, conv));
+    return;
+  }
+  const fatia = e.target.closest(".fatia");
+  if (fatia) {
+    const mes = fatia.closest(".mes-donut").dataset.mes;
+    if (fatia.dataset.nome === "Pago") {
+      const conv = document.getElementById("sel-fornecedor-fin").value;
+      mostrarTransacoesFin(mes, conv, transacoesPara(mes, conv));
+    } else if (fatia.dataset.nome === "Laudado, aguardando pagamento") {
+      mostrarExamesEstado(mes, "laudados_sem_pagamento", "Laudados, aguardando pagamento");
+    } else if (fatia.dataset.nome === "Só pedido, sem laudo ainda") {
+      mostrarExamesEstado(mes, "nao_laudados", "Só pedido, sem laudo ainda");
+    }
+  }
+});
+
 carregarRealizadosFornecedor();
 
 let encerrado = false;
