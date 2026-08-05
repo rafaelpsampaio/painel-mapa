@@ -5,6 +5,17 @@ rem  - opcionalmente, inicia o painel junto com o Windows
 chcp 65001 >nul
 cd /d "%~dp0"
 
+echo Instalando bibliotecas necessarias (isso pode demorar um pouco)...
+py -m pip install --quiet --disable-pip-version-check -r requirements.txt
+if errorlevel 1 (
+    echo.
+    echo ATENCAO: falha ao instalar as bibliotecas necessarias.
+    echo Verifique sua conexao com a internet e tente rodar instalar.bat de novo.
+    echo.
+    pause
+    exit /b 1
+)
+
 if not exist painel.ico py gerar_icone.py
 
 echo Criando atalho na area de trabalho...
