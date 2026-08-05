@@ -22,7 +22,8 @@ ARQ_VERSAO = os.path.join(PASTA, ".versao")
 ARQ_TOKEN = os.path.join(PASTA, "update_token.txt")
 
 EXTENSOES = (".py", ".html", ".vbs", ".bat")
-TXT_PERMITIDOS = {"leia-me.txt", "guia-dra-gisele.txt", "guia-rafael.txt"}
+TXT_PERMITIDOS = {"leia-me.txt", "guia-dra-gisele.txt", "guia-rafael.txt",
+                   "requirements.txt"}
 NUNCA = {"baixas.txt", "update_token.txt", "token_cache.json",
          "atualizacao.json", ".versao", ".env", ".env.txt"}
 

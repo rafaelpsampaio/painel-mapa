@@ -10,13 +10,18 @@ import traceback
 PASTA = os.path.dirname(os.path.abspath(__file__))
 
 
+DEPENDENCIAS = ("openpyxl", "pypdf")
+
+
 def _instalar_dependencias():
-    """Instala openpyxl/pypdf se faltarem (ex.: computador novo onde o
-    instalar.bat nao chegou a rodar isso, ou rodou sem internet)."""
+    """Instala as bibliotecas que faltam (ex.: computador novo onde o
+    instalar.bat nao chegou a rodar isso, ou rodou sem internet).
+    Nomes fixos (nao le requirements.txt): esse arquivo .txt pode nao
+    ter chegado ainda via autoatualizacao, que so sincroniza .py/.html/
+    .vbs/.bat e alguns .txt nomeados."""
     r = subprocess.run(
         [sys.executable, "-m", "pip", "install", "--quiet",
-         "--disable-pip-version-check", "-r",
-         os.path.join(PASTA, "requirements.txt")],
+         "--disable-pip-version-check", *DEPENDENCIAS],
         capture_output=True, text=True)
     if r.returncode != 0:
         raise RuntimeError(f"pip install falhou:\n{r.stdout}\n{r.stderr}")
