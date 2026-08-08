@@ -191,3 +191,35 @@ def test_importacoes_sem_pasta_local_configurada(monkeypatch):
     monkeypatch.setattr(lr, "pasta_documentos", lambda: None)
     resultado = lr.importacoes(pasta_email=AMOSTRAS)
     assert resultado["local"] == {"pasta": "", "arquivos": []}
+
+
+def test_inventario_pasta_nome_com_colchetes(tmp_path):
+    """Pasta com [ ] no nome nao pode confundir o glob.glob e sumir com os arquivos."""
+    pasta = tmp_path / "Demonstrativos [2026]"
+    pasta.mkdir()
+    shutil.copy(os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"), pasta)
+    itens = lr.inventario_pasta(str(pasta))
+    assert [i["arquivo"] for i in itens] == ["DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"]
+
+
+def test_coletar_pasta_nome_com_colchetes(tmp_path):
+    """Mesmo bug de glob.escape, na funcao usada pela aba Financeiro."""
+    pasta = tmp_path / "Demonstrativos [2026]"
+    pasta.mkdir()
+    shutil.copy(os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"), pasta)
+    docs = lr.coletar(pastas=(str(pasta),))
+    assert [d["arquivo"] for d in docs] == ["DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"]
+
+
+def test_inspecionar_arquivo_erro_na_classificacao_nao_derruba(monkeypatch):
+    """Se algo quebrar depois do _tentar_parsers (ex.: _macro), vira card 'erro',
+    nao uma excecao que sobe e derruba o /api/importacoes inteiro."""
+    caminho = os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf")
+
+    def _macro_quebrado(r):
+        raise KeyError("campo inesperado")
+
+    monkeypatch.setattr(lr, "_macro", _macro_quebrado)
+    item = lr._inspecionar_arquivo(caminho)
+    assert item["status"] == "erro"
+    assert item["motivo"]

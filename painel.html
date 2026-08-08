@@ -398,6 +398,7 @@ async function carregar() {
     if (d.erro) throw new Error(d.erro);
     dados = d;
     render();
+    carregarImportacoes();
     mostrar("conteudo");
   } catch (e) {
     const semServidor = (e instanceof TypeError);

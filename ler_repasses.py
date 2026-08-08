@@ -349,7 +349,7 @@ def coletar(pastas=None):
     docs = []
     vistos = set()
     for pasta in pastas:
-        for caminho in sorted(glob.glob(os.path.join(pasta, "*"))):
+        for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*"))):
             nome = os.path.basename(caminho).lower()
             if nome in vistos:
                 continue
@@ -418,9 +418,12 @@ def _inspecionar_arquivo(caminho):
     if r is None:
         return {"arquivo": nome, "status": "nao_identificado",
                 "motivo": "Nenhum parser conhecido reconheceu o conteúdo deste arquivo"}
-    return {"arquivo": nome, "status": "ok", "tipo": r["tipo"],
-            "tipo_amigavel": NOMES_AMIGAVEIS.get(r["tipo"], r["tipo"]),
-            "resumo": _macro(r)}
+    try:
+        return {"arquivo": nome, "status": "ok", "tipo": r["tipo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS.get(r["tipo"], r["tipo"]),
+                "resumo": _macro(r)}
+    except Exception as e:
+        return {"arquivo": nome, "status": "erro", "motivo": str(e)}
 
 
 def inventario_pasta(pasta):
@@ -428,7 +431,7 @@ def inventario_pasta(pasta):
     if not pasta or not os.path.isdir(pasta):
         return []
     return [_inspecionar_arquivo(caminho)
-            for caminho in sorted(glob.glob(os.path.join(pasta, "*")))
+            for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*")))
             if os.path.isfile(caminho)]
 
 

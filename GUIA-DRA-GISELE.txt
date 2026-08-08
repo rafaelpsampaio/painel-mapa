@@ -79,8 +79,17 @@ PARA VER OS PAGAMENTOS
   CardioPro), mes a mes. Quando chegar o demonstrativo novo por
   email, ele entra sozinho na proxima vez que o painel abrir.
   Documento que NAO veio por email: salve o arquivo na pasta local
-  de documentos (configurada no alto da aba Financeiro) e clique em
+  de documentos (configurada no alto da aba Importacoes) e clique em
   Atualizar; o painel le de la tambem.
+
+PARA VER SE UM ARQUIVO FOI RECONHECIDO
+  Aba "Importacoes": lista todo arquivo que o painel achou, tanto na
+  pasta local de documentos quanto na pasta baixada sozinha por
+  email. Cada arquivo aparece com um cartao dizendo se foi
+  reconhecido (e qual tipo de documento e) ou se nao foi
+  identificado. Use esta aba quando salvar um arquivo e ele parecer
+  que nao entrou no cruzamento, pra conferir se o painel realmente
+  achou ele.
 
 SE PEDIR PARA ENTRAR NA CONTA
   As vezes (raramente) o painel pede login. A propria tela mostra:
