@@ -746,6 +746,7 @@ async function salvarPasta() {
     : "pasta desativada";
   carregarFinanceiro();
   carregarRealizadosFornecedor();
+  carregarImportacoes();
 }
 
 function verFaltando() {
@@ -811,6 +812,61 @@ async function carregarFinanceiro() {
   }
 }
 carregarFinanceiro();
+
+function ordemStatusImportacao(status) {
+  return status === "erro" ? 0 : status === "nao_identificado" ? 1 : 2;
+}
+
+function cardImportacao(item) {
+  if (item.status === "ok") {
+    return "<div class='card-import'>" +
+      "<div class='ci-arquivo'>" + esc(item.arquivo) + "</div>" +
+      "<div class='ci-tipo'>" + esc(item.tipo_amigavel) + "</div>" +
+      "<div class='ci-resumo'>" + esc(item.resumo) + "</div></div>";
+  }
+  const rotulo = item.status === "erro" ? "Erro ao ler" : "Não identificado";
+  const classeBadge = item.status === "erro" ? "b-atrasado" : "b-provavel";
+  return "<div class='card-import st-" + item.status + "'>" +
+    "<div class='ci-arquivo'>" + esc(item.arquivo) + "</div>" +
+    "<span class='badge " + classeBadge + "'>" + rotulo + "</span>" +
+    "<div class='ci-motivo'>" + esc(item.motivo) + "</div></div>";
+}
+
+function renderSecaoImportacoes(idSecao, secao) {
+  const raiz = document.getElementById(idSecao);
+  const resumoEl = raiz.querySelector(".import-resumo");
+  const listaEl = raiz.querySelector(".grade-importacoes");
+  if (!secao.arquivos.length) {
+    resumoEl.textContent = "";
+    listaEl.innerHTML = secao.pasta
+      ? "<p class='nota'>Nenhum arquivo encontrado nesta pasta.</p>"
+      : "<p class='nota'>Nenhuma pasta configurada. Cole o caminho acima e salve.</p>";
+    return;
+  }
+  const naoId = secao.arquivos.filter(a => a.status === "nao_identificado").length;
+  const erro = secao.arquivos.filter(a => a.status === "erro").length;
+  resumoEl.textContent = secao.arquivos.length + " arquivo" +
+    (secao.arquivos.length === 1 ? "" : "s") +
+    (naoId ? " · " + naoId + " não identificado" + (naoId === 1 ? "" : "s") : "") +
+    (erro ? " · " + erro + " com erro" : "");
+  const ordenados = secao.arquivos.slice().sort((a, b) =>
+    ordemStatusImportacao(a.status) - ordemStatusImportacao(b.status) ||
+    a.arquivo.localeCompare(b.arquivo));
+  listaEl.innerHTML = ordenados.map(cardImportacao).join("");
+}
+
+async function carregarImportacoes() {
+  try {
+    const d = await (await fetch("/api/importacoes")).json();
+    renderSecaoImportacoes("sec-import-local", d.local);
+    renderSecaoImportacoes("sec-import-email", d.email);
+  } catch (e) {
+    const msg = "<p class='nota'>Não consegui ler os arquivos.</p>";
+    document.querySelector("#sec-import-local .grade-importacoes").innerHTML = msg;
+    document.querySelector("#sec-import-email .grade-importacoes").innerHTML = msg;
+  }
+}
+carregarImportacoes();
 
 const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
 const COR_OUTROS = "#8f8c81";
