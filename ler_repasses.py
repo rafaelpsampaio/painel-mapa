@@ -272,6 +272,43 @@ def processar_cardiopro(caminho):
     return resumo
 
 
+def _fmt_valor(v):
+    """Valor em reais no padrao brasileiro (ex.: 11.282,34)."""
+    return f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+NOMES_AMIGAVEIS = {
+    "IDS - Listagem de Repasse": "IDS · Repasse por unidade",
+    "IDS - Listagem de Exames/Laudos": "IDS · Exames e laudos",
+    "Unimed - Demonstrativo": "Unimed · Demonstrativo",
+    "CardioPro - Planilha de repasse": "CardioPro · Planilha",
+}
+
+
+def _macro(r):
+    """Resumo de uma linha pro card da aba Importacoes."""
+    tipo = r["tipo"]
+    if tipo == "IDS - Listagem de Repasse":
+        if r.get("total"):
+            return f"{r['total']['qtd']} exames · R$ {_fmt_valor(r['total']['valor'])}"
+        return f"{len(r['setores'])} setor(es)"
+    if tipo == "IDS - Listagem de Exames/Laudos":
+        partes = [f"{r.get('total', '?')} exames"]
+        if r.get("periodo"):
+            partes.append(f"período {r['periodo']}")
+        return " · ".join(partes)
+    if tipo.startswith("Unimed"):
+        partes = []
+        if r.get("liquido"):
+            partes.append(f"R$ {_fmt_valor(r['liquido'])} líquido")
+        if r.get("periodo"):
+            partes.append(f"período {r['periodo']}")
+        return " · ".join(partes) if partes else f"{len(r['executantes'])} executante(s)"
+    tot_ecg = sum(m["ecg"] for m in r["meses"])
+    tot_mapa = sum(m["mapa"] for m in r["meses"])
+    return f"{len(r['meses'])} mes(es) · {tot_ecg} ECG · {tot_mapa} MAPA"
+
+
 def pastas_padrao():
     """repasses/ (email) + pasta local do usuario; amostras/ como reserva."""
     if glob.glob(os.path.join("repasses", "*")):
