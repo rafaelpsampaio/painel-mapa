@@ -309,6 +309,27 @@ def _macro(r):
     return f"{len(r['meses'])} mes(es) · {tot_ecg} ECG · {tot_mapa} MAPA"
 
 
+def _tentar_parsers(caminho):
+    """Roda o(s) parser(es) da extensao do arquivo.
+    Devolve (resumo, erro): resumo e None se nenhum parser reconheceu o
+    conteudo (ou a extensao nao tem parser); erro e a mensagem de excecao
+    se algum parser quebrou no meio do caminho."""
+    ext = os.path.splitext(caminho)[1].lower()
+    try:
+        if ext == ".pdf":
+            r = None
+            for parser in (processar_ids, processar_unimed, processar_listagem_exames):
+                r = parser(caminho)
+                if r:
+                    break
+            return r, None
+        if ext == ".xlsx":
+            return processar_cardiopro(caminho), None
+        return None, None
+    except Exception as e:
+        return None, str(e)
+
+
 def pastas_padrao():
     """repasses/ (email) + pasta local do usuario; amostras/ como reserva."""
     if glob.glob(os.path.join("repasses", "*")):
@@ -332,16 +353,9 @@ def coletar(pastas=None):
             nome = os.path.basename(caminho).lower()
             if nome in vistos:
                 continue
-            try:
-                if nome.endswith(".pdf"):
-                    r = (processar_ids(caminho) or processar_unimed(caminho)
-                         or processar_listagem_exames(caminho))
-                elif nome.endswith(".xlsx"):
-                    r = processar_cardiopro(caminho)
-                else:
-                    continue
-            except Exception as e:
-                print(f"ERRO ao processar {caminho}: {e}")
+            r, erro = _tentar_parsers(caminho)
+            if erro:
+                print(f"ERRO ao processar {caminho}: {erro}")
                 continue
             if r:
                 vistos.add(nome)

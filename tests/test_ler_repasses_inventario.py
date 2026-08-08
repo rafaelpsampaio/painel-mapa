@@ -48,3 +48,40 @@ def test_nomes_amigaveis_cobre_os_4_tipos_conhecidos():
         "Unimed - Demonstrativo": "Unimed · Demonstrativo",
         "CardioPro - Planilha de repasse": "CardioPro · Planilha",
     }
+
+
+def test_tentar_parsers_extensao_nao_suportada(tmp_path):
+    caminho = tmp_path / "arquivo.csv"
+    caminho.write_text("a,b,c")
+    resumo, erro = lr._tentar_parsers(str(caminho))
+    assert resumo is None
+    assert erro is None
+
+
+def test_tentar_parsers_pdf_corrompido(tmp_path):
+    caminho = tmp_path / "corrompido.pdf"
+    caminho.write_bytes(b"nao e um pdf de verdade")
+    resumo, erro = lr._tentar_parsers(str(caminho))
+    assert resumo is None
+    assert erro is not None
+
+
+def test_tentar_parsers_pdf_reconhecido():
+    import os
+    caminho = os.path.join("amostras", "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf")
+    resumo, erro = lr._tentar_parsers(caminho)
+    assert erro is None
+    assert resumo["tipo"] == "IDS - Listagem de Repasse"
+
+
+def test_coletar_amostras_preserva_comportamento():
+    docs = lr.coletar(pastas=("amostras",))
+    tipos_arquivos = sorted((d["tipo"], d["arquivo"]) for d in docs)
+    assert tipos_arquivos == sorted([
+        ("IDS - Listagem de Repasse", "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"),
+        ("IDS - Listagem de Repasse", "DR. FERNANDO SAMPAIO.pdf"),
+        ("IDS - Listagem de Repasse", "MAPA - DR. FERNANDO SAMPAIO.pdf"),
+        ("Unimed - Demonstrativo", "ExibeDemonstrativoPdf.pdf"),
+        ("CardioPro - Planilha de repasse", "Repasse Dr. Fernando 2026.xlsx"),
+        ("CardioPro - Planilha de repasse", "Repasse Dr. Fernando.xlsx"),
+    ])
