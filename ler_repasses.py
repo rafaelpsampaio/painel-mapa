@@ -404,6 +404,44 @@ def financeiro(pastas=None):
     return {"empresas": empresas}
 
 
+def _inspecionar_arquivo(caminho):
+    """Classifica um arquivo pro card da aba Importacoes: ok, nao_identificado
+    ou erro."""
+    nome = os.path.basename(caminho)
+    ext = os.path.splitext(nome)[1].lower()
+    if ext not in (".pdf", ".xlsx"):
+        return {"arquivo": nome, "status": "nao_identificado",
+                "motivo": f'Extensão "{ext or "(sem extensão)"}" ainda não tem parser'}
+    r, erro = _tentar_parsers(caminho)
+    if erro:
+        return {"arquivo": nome, "status": "erro", "motivo": erro}
+    if r is None:
+        return {"arquivo": nome, "status": "nao_identificado",
+                "motivo": "Nenhum parser conhecido reconheceu o conteúdo deste arquivo"}
+    return {"arquivo": nome, "status": "ok", "tipo": r["tipo"],
+            "tipo_amigavel": NOMES_AMIGAVEIS.get(r["tipo"], r["tipo"]),
+            "resumo": _macro(r)}
+
+
+def inventario_pasta(pasta):
+    """Status de cada arquivo de uma pasta pra aba Importacoes."""
+    if not pasta or not os.path.isdir(pasta):
+        return []
+    return [_inspecionar_arquivo(caminho)
+            for caminho in sorted(glob.glob(os.path.join(pasta, "*")))
+            if os.path.isfile(caminho)]
+
+
+def importacoes(pasta_email="repasses"):
+    """Estrutura pra aba Importacoes: pasta local (prioritaria) + pasta do email."""
+    local = pasta_documentos()
+    return {
+        "local": {"pasta": local or "",
+                  "arquivos": inventario_pasta(local) if local else []},
+        "email": {"pasta": pasta_email, "arquivos": inventario_pasta(pasta_email)},
+    }
+
+
 def main():
     achados = coletar()
 
