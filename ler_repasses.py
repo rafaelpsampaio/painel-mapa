@@ -272,6 +272,64 @@ def processar_cardiopro(caminho):
     return resumo
 
 
+def _fmt_valor(v):
+    """Valor em reais no padrao brasileiro (ex.: 11.282,34)."""
+    return f"{v:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+NOMES_AMIGAVEIS = {
+    "IDS - Listagem de Repasse": "IDS · Repasse por unidade",
+    "IDS - Listagem de Exames/Laudos": "IDS · Exames e laudos",
+    "Unimed - Demonstrativo": "Unimed · Demonstrativo",
+    "CardioPro - Planilha de repasse": "CardioPro · Planilha",
+}
+
+
+def _macro(r):
+    """Resumo de uma linha pro card da aba Importacoes."""
+    tipo = r["tipo"]
+    if tipo == "IDS - Listagem de Repasse":
+        if r.get("total"):
+            return f"{r['total']['qtd']} exames · R$ {_fmt_valor(r['total']['valor'])}"
+        return f"{len(r['setores'])} setor(es)"
+    if tipo == "IDS - Listagem de Exames/Laudos":
+        partes = [f"{r.get('total', '?')} exames"]
+        if r.get("periodo"):
+            partes.append(f"período {r['periodo']}")
+        return " · ".join(partes)
+    if tipo.startswith("Unimed"):
+        partes = []
+        if r.get("liquido"):
+            partes.append(f"R$ {_fmt_valor(r['liquido'])} líquido")
+        if r.get("periodo"):
+            partes.append(f"período {r['periodo']}")
+        return " · ".join(partes) if partes else f"{len(r['executantes'])} executante(s)"
+    tot_ecg = sum(m["ecg"] for m in r["meses"])
+    tot_mapa = sum(m["mapa"] for m in r["meses"])
+    return f"{len(r['meses'])} mes(es) · {tot_ecg} ECG · {tot_mapa} MAPA"
+
+
+def _tentar_parsers(caminho):
+    """Roda o(s) parser(es) da extensao do arquivo.
+    Devolve (resumo, erro): resumo e None se nenhum parser reconheceu o
+    conteudo (ou a extensao nao tem parser); erro e a mensagem de excecao
+    se algum parser quebrou no meio do caminho."""
+    ext = os.path.splitext(caminho)[1].lower()
+    try:
+        if ext == ".pdf":
+            r = None
+            for parser in (processar_ids, processar_unimed, processar_listagem_exames):
+                r = parser(caminho)
+                if r:
+                    break
+            return r, None
+        if ext == ".xlsx":
+            return processar_cardiopro(caminho), None
+        return None, None
+    except Exception as e:
+        return None, str(e)
+
+
 def pastas_padrao():
     """repasses/ (email) + pasta local do usuario; amostras/ como reserva."""
     if glob.glob(os.path.join("repasses", "*")):
@@ -291,20 +349,13 @@ def coletar(pastas=None):
     docs = []
     vistos = set()
     for pasta in pastas:
-        for caminho in sorted(glob.glob(os.path.join(pasta, "*"))):
+        for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*"))):
             nome = os.path.basename(caminho).lower()
             if nome in vistos:
                 continue
-            try:
-                if nome.endswith(".pdf"):
-                    r = (processar_ids(caminho) or processar_unimed(caminho)
-                         or processar_listagem_exames(caminho))
-                elif nome.endswith(".xlsx"):
-                    r = processar_cardiopro(caminho)
-                else:
-                    continue
-            except Exception as e:
-                print(f"ERRO ao processar {caminho}: {e}")
+            r, erro = _tentar_parsers(caminho)
+            if erro:
+                print(f"ERRO ao processar {caminho}: {erro}")
                 continue
             if r:
                 vistos.add(nome)
@@ -351,6 +402,47 @@ def financeiro(pastas=None):
                            {"tipo": "MAPA", "qtd": tot_mapa, "valor": None}],
             })
     return {"empresas": empresas}
+
+
+def _inspecionar_arquivo(caminho):
+    """Classifica um arquivo pro card da aba Importacoes: ok, nao_identificado
+    ou erro."""
+    nome = os.path.basename(caminho)
+    ext = os.path.splitext(nome)[1].lower()
+    if ext not in (".pdf", ".xlsx"):
+        return {"arquivo": nome, "status": "nao_identificado",
+                "motivo": f'Extensão "{ext or "(sem extensão)"}" ainda não tem parser'}
+    r, erro = _tentar_parsers(caminho)
+    if erro:
+        return {"arquivo": nome, "status": "erro", "motivo": erro}
+    if r is None:
+        return {"arquivo": nome, "status": "nao_identificado",
+                "motivo": "Nenhum parser conhecido reconheceu o conteúdo deste arquivo"}
+    try:
+        return {"arquivo": nome, "status": "ok", "tipo": r["tipo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS.get(r["tipo"], r["tipo"]),
+                "resumo": _macro(r)}
+    except Exception as e:
+        return {"arquivo": nome, "status": "erro", "motivo": str(e)}
+
+
+def inventario_pasta(pasta):
+    """Status de cada arquivo de uma pasta pra aba Importacoes."""
+    if not pasta or not os.path.isdir(pasta):
+        return []
+    return [_inspecionar_arquivo(caminho)
+            for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*")))
+            if os.path.isfile(caminho)]
+
+
+def importacoes(pasta_email="repasses"):
+    """Estrutura pra aba Importacoes: pasta local (prioritaria) + pasta do email."""
+    local = pasta_documentos()
+    return {
+        "local": {"pasta": local or "",
+                  "arquivos": inventario_pasta(local) if local else []},
+        "email": {"pasta": pasta_email, "arquivos": inventario_pasta(pasta_email)},
+    }
 
 
 def main():

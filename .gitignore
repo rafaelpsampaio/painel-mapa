@@ -19,3 +19,4 @@ cache_pdf.json
 # python
 __pycache__/
 *.pyc
+.pytest_cache/

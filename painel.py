@@ -112,6 +112,9 @@ class Handler(BaseHTTPRequestHandler):
                 import cruzar_pagamentos
                 self._json(cruzar_pagamentos.agregar_por_mes_fornecedor())
 
+            elif rota.path == "/api/importacoes":
+                self._json(ler_repasses.importacoes())
+
             elif rota.path == "/api/config":
                 pasta = ler_repasses.pasta_documentos()
                 arquivos = (len(os.listdir(pasta)) if pasta else 0)

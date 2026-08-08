@@ -17,7 +17,7 @@ PARTE 1: INSTALAR NO COMPUTADOR DELA (uma vez so)
      painel pede login por codigo e ela entra uma vez.
   3b. (Opcional) Crie uma pasta para documentos avulsos (ex.:
       Documentos\Demonstrativos) e configure o caminho no alto da
-      aba Financeiro do painel. Tudo que for salvo ali entra no
+      aba Importacoes do painel. Tudo que for salvo ali entra no
       cruzamento junto com o que chega por email. A configuracao
       fica no config.json de cada computador.
   4. De dois cliques em instalar.bat. Ele cria o atalho "Painel MAPA"

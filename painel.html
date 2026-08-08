@@ -162,6 +162,18 @@
     border-radius: 7px; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 13.5px; }
   #transacoes-corpo-fin { overflow-x: auto; }
   #transacoes-corpo-fin td.muted { color: #99a; font-size: 12.5px; }
+
+  .import-resumo { color: #667; font-size: 14.5px; margin: 4px 0 10px; }
+  .grade-importacoes { display: flex; flex-direction: column; gap: 10px; }
+  .card-import { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
+    background: #fff; border-radius: 10px; padding: 12px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); border-left: 5px solid #1e5a8a; }
+  .card-import.st-nao_identificado { border-left-color: #b26a00; }
+  .card-import.st-erro { border-left-color: #c62828; }
+  .card-import .ci-arquivo { font-weight: 600; flex: 1 1 220px; min-width: 180px; }
+  .card-import .ci-tipo { color: #1e5a8a; font-size: 14px; }
+  .card-import .ci-resumo { color: #667; font-size: 14px; }
+  .card-import .ci-motivo { color: #667; font-size: 13.5px; flex: 2 1 280px; }
 </style>
 </head>
 <body>
@@ -189,6 +201,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   <button id="aba-btn-exames" onclick="mostraAba('exames')">Exames</button>
   <button id="aba-btn-financeiro" onclick="mostraAba('financeiro')">Financeiro</button>
   <button id="aba-btn-analises" onclick="mostraAba('analises')">Análises</button>
+  <button id="aba-btn-importacoes" onclick="mostraAba('importacoes')">Importações</button>
 </nav>
 
 <div class="tela" id="carregando">
@@ -256,18 +269,6 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   </div>
 
   <div id="aba-financeiro" class="oculto">
-    <section class="bloco">
-      <h2>Pasta local de documentos</h2>
-      <p class="nota">Além dos que chegam por email, o painel lê os
-        demonstrativos colocados nesta pasta do computador (opcional).
-        Cole o caminho e salve; deixe em branco para desativar.</p>
-      <div class="filtros">
-        <input type="text" id="cfg-pasta"
-          placeholder="Ex.: C:\Users\gisele\Documents\Demonstrativos">
-        <button onclick="salvarPasta()">Salvar</button>
-        <span class="contagem" id="cfg-status"></span>
-      </div>
-    </section>
     <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
 
     <div id="sec-orfaos"></div>
@@ -315,6 +316,37 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       <div id="transacoes-corpo-fin"></div>
     </section>
   </div>
+
+  <div id="aba-importacoes" class="oculto">
+    <section class="bloco">
+      <h2>Pasta local</h2>
+      <p class="nota">Além dos que chegam por email, o painel lê os
+        demonstrativos colocados nesta pasta do computador (opcional).
+        Cole o caminho e salve; deixe em branco para desativar.</p>
+      <div class="filtros">
+        <input type="text" id="cfg-pasta"
+          placeholder="Ex.: C:\Users\gisele\Documents\Demonstrativos">
+        <button onclick="salvarPasta()">Salvar</button>
+        <span class="contagem" id="cfg-status"></span>
+      </div>
+    </section>
+
+    <section class="bloco" id="sec-import-local">
+      <h2>Arquivos da pasta local</h2>
+      <p class="nota">Hoje reconhecemos: IDS · Repasse por unidade, IDS · Exames
+        e laudos, Unimed · Demonstrativo, CardioPro · Planilha. Um arquivo
+        diferente desses aparece como "não identificado" abaixo.</p>
+      <p class="import-resumo"></p>
+      <div class="grade-importacoes"><p class="nota">Carregando&hellip;</p></div>
+    </section>
+
+    <section class="bloco" id="sec-import-email">
+      <h2>Arquivos da pasta do email (repasses)</h2>
+      <p class="nota">Baixados automaticamente sempre que o painel atualiza.</p>
+      <p class="import-resumo"></p>
+      <div class="grade-importacoes"><p class="nota">Carregando&hellip;</p></div>
+    </section>
+  </div>
   <div class="tooltip-fin" id="tooltip-fin"></div>
 
   <p class="rodape">Somente leitura da caixa controlemapa@hotmail.com.
@@ -348,7 +380,7 @@ function mostrar(id) {
     document.getElementById(t).classList.toggle("oculto", t !== id);
 }
 function mostraAba(nome) {
-  for (const a of ["geral", "exames", "financeiro", "analises"]) {
+  for (const a of ["geral", "exames", "financeiro", "analises", "importacoes"]) {
     document.getElementById("aba-" + a).classList.toggle("oculto", a !== nome);
     document.getElementById("aba-btn-" + a).classList.toggle("ativa", a === nome);
   }
@@ -366,6 +398,7 @@ async function carregar() {
     if (d.erro) throw new Error(d.erro);
     dados = d;
     render();
+    carregarImportacoes();
     mostrar("conteudo");
   } catch (e) {
     const semServidor = (e instanceof TypeError);
@@ -714,6 +747,7 @@ async function salvarPasta() {
     : "pasta desativada";
   carregarFinanceiro();
   carregarRealizadosFornecedor();
+  carregarImportacoes();
 }
 
 function verFaltando() {
@@ -779,6 +813,61 @@ async function carregarFinanceiro() {
   }
 }
 carregarFinanceiro();
+
+function ordemStatusImportacao(status) {
+  return status === "erro" ? 0 : status === "nao_identificado" ? 1 : 2;
+}
+
+function cardImportacao(item) {
+  if (item.status === "ok") {
+    return "<div class='card-import'>" +
+      "<div class='ci-arquivo'>" + esc(item.arquivo) + "</div>" +
+      "<div class='ci-tipo'>" + esc(item.tipo_amigavel) + "</div>" +
+      "<div class='ci-resumo'>" + esc(item.resumo) + "</div></div>";
+  }
+  const rotulo = item.status === "erro" ? "Erro ao ler" : "Não identificado";
+  const classeBadge = item.status === "erro" ? "b-atrasado" : "b-provavel";
+  return "<div class='card-import st-" + item.status + "'>" +
+    "<div class='ci-arquivo'>" + esc(item.arquivo) + "</div>" +
+    "<span class='badge " + classeBadge + "'>" + rotulo + "</span>" +
+    "<div class='ci-motivo'>" + esc(item.motivo) + "</div></div>";
+}
+
+function renderSecaoImportacoes(idSecao, secao) {
+  const raiz = document.getElementById(idSecao);
+  const resumoEl = raiz.querySelector(".import-resumo");
+  const listaEl = raiz.querySelector(".grade-importacoes");
+  if (!secao.arquivos.length) {
+    resumoEl.textContent = "";
+    listaEl.innerHTML = secao.pasta
+      ? "<p class='nota'>Nenhum arquivo encontrado nesta pasta.</p>"
+      : "<p class='nota'>Nenhuma pasta configurada. Cole o caminho acima e salve.</p>";
+    return;
+  }
+  const naoId = secao.arquivos.filter(a => a.status === "nao_identificado").length;
+  const erro = secao.arquivos.filter(a => a.status === "erro").length;
+  resumoEl.textContent = secao.arquivos.length + " arquivo" +
+    (secao.arquivos.length === 1 ? "" : "s") +
+    (naoId ? " · " + naoId + " não identificado" + (naoId === 1 ? "" : "s") : "") +
+    (erro ? " · " + erro + " com erro" : "");
+  const ordenados = secao.arquivos.slice().sort((a, b) =>
+    ordemStatusImportacao(a.status) - ordemStatusImportacao(b.status) ||
+    a.arquivo.localeCompare(b.arquivo));
+  listaEl.innerHTML = ordenados.map(cardImportacao).join("");
+}
+
+async function carregarImportacoes() {
+  try {
+    const d = await (await fetch("/api/importacoes")).json();
+    renderSecaoImportacoes("sec-import-local", d.local);
+    renderSecaoImportacoes("sec-import-email", d.email);
+  } catch (e) {
+    const msg = "<p class='nota'>Não consegui ler os arquivos.</p>";
+    document.querySelector("#sec-import-local .grade-importacoes").innerHTML = msg;
+    document.querySelector("#sec-import-email .grade-importacoes").innerHTML = msg;
+  }
+}
+carregarImportacoes();
 
 const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
 const COR_OUTROS = "#8f8c81";
