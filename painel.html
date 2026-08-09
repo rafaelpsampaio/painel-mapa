@@ -17,6 +17,9 @@
     --cor-navy: #0f172a;
     --cor-navy-suave: #1e293b;
     --cor-navy-ativo: #263449;
+    --cor-texto-claro: #fff;
+    --cor-texto-nav: #94a3b8;
+    --cor-texto-nav-suave: #cbd5e1;
     --cor-primaria: #2563eb;
     --cor-primaria-fraca: #dbeafe;
     --cor-erro: #dc2626;   --cor-erro-fundo: #fee2e2;
@@ -29,7 +32,7 @@
 
   body { font-family: "Segoe UI", Arial, sans-serif; background: var(--cor-fundo);
          color: var(--cor-texto); font-size: 16px; padding-bottom: 60px; }
-  header { background: var(--cor-navy); color: #fff; padding: 16px 24px 0;
+  header { background: var(--cor-navy); color: var(--cor-texto-claro); padding: 16px 24px 0;
            display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
   header h1 { font-size: 19px; font-weight: 700; flex: 1; min-width: 240px;
               letter-spacing: .01em; }
@@ -39,17 +42,17 @@
     font-family: inherit; }
   select, button { cursor: pointer; }
   header select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.25);
-    color: #fff; }
-  #btn-atualizar { background: var(--cor-primaria); border: none; color: #fff;
+    color: var(--cor-texto-claro); }
+  #btn-atualizar { background: var(--cor-primaria); border: none; color: var(--cor-texto-claro);
     font-weight: 600; }
   #btn-atualizar:disabled { opacity: .6; cursor: wait; }
-  #btn-sair { background: transparent; color: #cbd5e1;
+  #btn-sair { background: transparent; color: var(--cor-texto-nav-suave);
     border: 1px solid rgba(255,255,255,.25); }
   nav.abas { background: var(--cor-navy-suave); padding: 0 24px; display: flex; gap: 0; }
   nav.abas button { border: none; border-bottom: 3px solid transparent;
     padding: 11px 18px; font-size: 13.5px; font-weight: 600; background: transparent;
-    color: #94a3b8; }
-  nav.abas button.ativa { color: #fff; border-bottom-color: var(--cor-primaria);
+    color: var(--cor-texto-nav); }
+  nav.abas button.ativa { color: var(--cor-texto-claro); border-bottom-color: var(--cor-primaria);
     background: var(--cor-navy-ativo); }
   main, .tela { max-width: 1180px; margin: 22px auto; padding: 0 16px; }
   .cards { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
