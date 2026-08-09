@@ -591,13 +591,13 @@ function renderExames() {
           ? "<span class='badge b-provavel' title='O pagador responsável " +
             "já cobre exames desta data e este não apareceu nos " +
             "demonstrativos recebidos'>sem registro</span>"
-          : "<span style='color:#99a'>aguardando ciclo</span>"));
+          : "<span style='color:var(--cor-texto-fraco)'>aguardando ciclo</span>"));
     return "<tr><td class='codigo'>" + esc(e.codigo) + "</td>" +
       "<td>" + esc(e.nome || "(sem nome)") + "</td>" +
       "<td>" + esc(e.empresa) + "</td>" +
       "<td>" + dataBr(e.recebido) + "</td>" +
       "<td>" + (e.prazo ? dataBr(e.prazo)
-                        : "<span style='color:#99a'>sem prazo</span>") + "</td>" +
+                        : "<span style='color:var(--cor-texto-fraco)'>sem prazo</span>") + "</td>" +
       "<td><span class='badge b-" + e.status + "'>" +
         ROTULOS[e.status] + "</span></td>" +
       "<td>" + (e.retornado_em ? dataBr(e.retornado_em) : "") + "</td>" +
@@ -629,7 +629,7 @@ function linhaExame(ex, extra) {
   const prazo = ex.prazo
     ? (ex.atrasado ? "<span class='alerta'>" + dataBr(ex.prazo) + "</span>"
                    : dataBr(ex.prazo))
-    : "<span style='color:#99a'>não informado</span>";
+    : "<span style='color:var(--cor-texto-fraco)'>não informado</span>";
   return "<tr><td class='codigo'>" + esc(ex.codigo) + "</td>" +
     "<td>" + esc(ex.nome || "(nome não identificado)") + "</td>" +
     "<td>" + esc(ex.fonte) + "</td>" +
@@ -764,7 +764,7 @@ function render() {
       "<th>Data do exame</th><th>Documento</th></tr>" +
       dados.pagamentos_orfaos.map(o =>
         "<tr><td>" + esc(o.empresa) + "</td><td>" + esc(o.nome) + "</td><td>" +
-        dataBr(o.data) + "</td><td style='font-size:13px;color:#667'>" +
+        dataBr(o.data) + "</td><td style='font-size:13px;color:var(--cor-texto-fraco)'>" +
         esc(o.origem) + "</td></tr>").join("") + "</table></div></details>";
   } else {
     orf.innerHTML = "";
@@ -995,7 +995,7 @@ function montarDonutFin(total, fatias, size, largura) {
   if (!total) {
     return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size + "'>" +
       "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + (size - largura) / 2 +
-      "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/></svg>";
+      "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/></svg>";
   }
   const r = (size - largura) / 2;
   const circ = 2 * Math.PI * r;
@@ -1014,7 +1014,7 @@ function montarDonutFin(total, fatias, size, largura) {
   }).join("");
   return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size +
     "' style='transform:rotate(-90deg)'><circle cx='" + size / 2 + "' cy='" + size / 2 +
-    "' r='" + r + "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/>" +
+    "' r='" + r + "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/>" +
     arcos + "</svg>";
 }
 
@@ -1256,7 +1256,7 @@ async function encerrar() {
   try { await fetch("/api/sair", {method: "POST"}); } catch (e) {}
   document.body.innerHTML =
     "<div style='text-align:center;padding:80px 20px;font-size:22px'>" +
-    "✔ Painel encerrado.<br><span style='font-size:17px;color:#667'>" +
+    "✔ Painel encerrado.<br><span style='font-size:17px;color:var(--cor-texto-fraco)'>" +
     "Pode fechar esta aba. Para abrir de novo, duplo clique no atalho " +
     "\"Painel MAPA\".</span></div>";
   setTimeout(() => window.close(), 800);
