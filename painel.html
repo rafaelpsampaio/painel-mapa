@@ -4,151 +4,195 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Exames MAPA · Controle</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🩺</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><path d='M6 55 L26 55 L36 22 L52 82 L62 38 L70 55 L94 55' fill='none' stroke='%230f172a' stroke-width='9' stroke-linecap='round' stroke-linejoin='round'/></svg>">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Segoe UI", Arial, sans-serif; background: #f4f6f8;
-         color: #223; font-size: 17px; padding-bottom: 60px; }
-  header { background: #1e5a8a; color: #fff; padding: 16px 24px 0;
+
+  :root {
+    --cor-fundo: #f4f5f7;
+    --cor-superficie: #fff;
+    --cor-borda: #d8dae0;
+    --cor-texto: #1e293b;
+    --cor-texto-fraco: #64748b;
+    --cor-navy: #0f172a;
+    --cor-navy-suave: #1e293b;
+    --cor-navy-ativo: #263449;
+    --cor-texto-claro: #fff;
+    --cor-texto-nav: #94a3b8;
+    --cor-texto-nav-suave: #cbd5e1;
+    --cor-primaria: #2563eb;
+    --cor-primaria-fraca: #dbeafe;
+    --cor-erro: #dc2626;   --cor-erro-fundo: #fee2e2;
+    --cor-ok: #16a34a;     --cor-ok-fundo: #dcfce7;
+    --cor-alerta: #ca8a04; --cor-alerta-fundo: #fef3c7;
+    --cor-cinza: #475569;  --cor-cinza-fundo: #e2e8f0;
+    --raio: 6px;
+    --raio-pequeno: 4px;
+  }
+
+  body { font-family: "Segoe UI", Arial, sans-serif; background: var(--cor-fundo);
+         color: var(--cor-texto); font-size: 16px; padding-bottom: 60px; }
+  header { background: var(--cor-navy); color: var(--cor-texto-claro); padding: 16px 24px 0;
            display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
-  header h1 { font-size: 24px; flex: 1; min-width: 240px; }
-  header .sub { font-size: 14px; opacity: .85; width: 100%; }
-  select, button, input[type=text] { font-size: 16px; padding: 9px 14px;
-    border-radius: 8px; border: 1px solid #ccc; }
+  header h1 { font-size: 19px; font-weight: 700; flex: 1; min-width: 240px;
+              letter-spacing: .01em; }
+  header .sub { font-size: 12.5px; opacity: .75; width: 100%; }
+  select, button, input[type=text] { font-size: 14px; padding: 8px 12px;
+    border-radius: var(--raio-pequeno); border: 1px solid var(--cor-borda);
+    font-family: inherit; }
   select, button { cursor: pointer; }
-  #btn-atualizar { background: #ffb300; border: none; font-weight: 600; }
+  header select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.25);
+    color: var(--cor-texto-claro); }
+  #btn-atualizar { background: var(--cor-primaria); border: none; color: var(--cor-texto-claro);
+    font-weight: 600; }
   #btn-atualizar:disabled { opacity: .6; cursor: wait; }
-  nav.abas { background: #1e5a8a; padding: 10px 24px 0; display: flex; gap: 6px; }
-  nav.abas button { border: none; border-radius: 10px 10px 0 0;
-    padding: 12px 22px; font-size: 17px; background: #16466c; color: #cfe0ef; }
-  nav.abas button.ativa { background: #f4f6f8; color: #1e5a8a; font-weight: 700; }
+  #btn-sair { background: transparent; color: var(--cor-texto-nav-suave);
+    border: 1px solid rgba(255,255,255,.25); }
+  nav.abas { background: var(--cor-navy-suave); padding: 0 24px; display: flex; gap: 0; }
+  nav.abas button { border: none; border-bottom: 3px solid transparent;
+    padding: 11px 18px; font-size: 13.5px; font-weight: 600; background: transparent;
+    color: var(--cor-texto-nav); }
+  nav.abas button.ativa { color: var(--cor-texto-claro); border-bottom-color: var(--cor-primaria);
+    background: var(--cor-navy-ativo); }
   main, .tela { max-width: 1180px; margin: 22px auto; padding: 0 16px; }
-  .cards { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 22px; }
-  .card { flex: 1; min-width: 150px; background: #fff; border-radius: 12px;
-          padding: 16px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  .card .num { font-size: 38px; font-weight: 700; }
-  .card .rot { font-size: 15px; color: #556; }
-  .card.vermelho .num { color: #c62828; }
-  .card.verde .num { color: #2e7d32; }
-  .card.ambar .num { color: #b26a00; }
-  .card.cinza .num { color: #546e7a; }
-  .card.azul .num { color: #1e5a8a; }
-  section.bloco { background: #fff; border-radius: 12px; padding: 18px 20px;
-                  margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  section.bloco h2 { font-size: 20px; margin-bottom: 12px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+    gap: 1px; background: var(--cor-borda); border: 1px solid var(--cor-borda);
+    border-radius: var(--raio); overflow: hidden; margin-bottom: 22px; }
+  .card { background: var(--cor-superficie); padding: 14px 16px; }
+  .card .num { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums;
+    color: var(--cor-texto); }
+  .card .rot { font-size: 11.5px; color: var(--cor-texto-fraco); margin-top: 3px;
+    text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+  .card.vermelho .num { color: var(--cor-erro); }
+  .card.verde .num { color: var(--cor-ok); }
+  .card.ambar .num { color: var(--cor-alerta); }
+  .card.cinza .num { color: var(--cor-cinza); }
+  .card.azul .num { color: var(--cor-primaria); }
+  section.bloco { background: var(--cor-superficie); border: 1px solid var(--cor-borda);
+    border-radius: var(--raio); padding: 18px 20px; margin-bottom: 16px; }
+  section.bloco h2 { font-size: 15px; font-weight: 700; margin-bottom: 12px;
+    color: var(--cor-texto); }
   table { width: 100%; border-collapse: collapse; }
-  th, td { text-align: left; padding: 8px 8px; border-bottom: 1px solid #eee;
-           font-size: 15px; }
-  th { color: #667; font-size: 13px; text-transform: uppercase;
-       position: sticky; top: 0; background: #fff; z-index: 2;
-       box-shadow: 0 1px 0 #e0e0e0; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--cor-borda);
+           font-size: 13.5px; }
+  th { color: var(--cor-texto-fraco); font-size: 11px; text-transform: uppercase;
+       letter-spacing: .03em; font-weight: 700; position: sticky; top: 0;
+       background: var(--cor-superficie); z-index: 2;
+       box-shadow: inset 0 -1px 0 var(--cor-borda); }
   tr:last-child td { border-bottom: none; }
-  .codigo { font-family: Consolas, monospace; white-space: nowrap; }
-  .btn-baixa { background: #eceff1; border: 1px solid #b0bec5; font-size: 13px;
-               padding: 5px 10px; }
-  .btn-baixa:hover { background: #cfd8dc; }
-  .ok-grande { text-align: center; padding: 30px; font-size: 22px;
-               color: #2e7d32; }
-  .alerta { color: #c62828; font-weight: 600; }
-  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px;
-           font-size: 13px; font-weight: 600; white-space: nowrap; }
-  .b-atrasado { background: #fdecea; color: #c62828; }
-  .b-no_prazo { background: #e3f0fa; color: #1e5a8a; }
-  .b-retornado { background: #e8f5e9; color: #2e7d32; }
-  .b-provavel, .b-aviso { background: #fff3cd; color: #8a6d00; }
-  .b-baixado { background: #eceff1; color: #546e7a; }
-  .pago { color: #2e7d32; font-weight: 600; white-space: nowrap; }
-  details { margin-bottom: 14px; }
-  details summary { font-size: 18px; padding: 12px 16px; background: #fff;
-                    border-radius: 10px; cursor: pointer;
-                    box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  details .corpo { background: #fff; border-radius: 0 0 10px 10px;
-                   padding: 12px 16px; }
+  .codigo { font-family: Consolas, monospace; white-space: nowrap; font-size: 13px; }
+  .btn-baixa { background: var(--cor-fundo); border: 1px solid var(--cor-borda);
+               font-size: 12.5px; padding: 5px 10px; color: var(--cor-texto); }
+  .btn-baixa:hover { background: var(--cor-borda); }
+  .ok-grande { text-align: center; padding: 30px; font-size: 18px; font-weight: 600;
+               color: var(--cor-ok); }
+  .alerta { color: var(--cor-erro); font-weight: 600; }
+  .badge { display: inline-block; padding: 2px 9px; border-radius: var(--raio-pequeno);
+           font-size: 11.5px; font-weight: 700; white-space: nowrap;
+           text-transform: uppercase; letter-spacing: .02em; }
+  .b-atrasado { background: var(--cor-erro-fundo); color: var(--cor-erro); }
+  .b-no_prazo { background: var(--cor-primaria-fraca); color: var(--cor-primaria); }
+  .b-retornado { background: var(--cor-ok-fundo); color: var(--cor-ok); }
+  .b-provavel, .b-aviso { background: var(--cor-alerta-fundo); color: var(--cor-alerta); }
+  .b-baixado { background: var(--cor-cinza-fundo); color: var(--cor-cinza); }
+  .pago { color: var(--cor-ok); font-weight: 600; white-space: nowrap; }
+  details { margin-bottom: 12px; border: 1px solid var(--cor-borda);
+    border-radius: var(--raio); overflow: hidden; }
+  details summary { font-size: 14.5px; font-weight: 600; padding: 12px 16px;
+    background: var(--cor-superficie); cursor: pointer; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  details .corpo { background: var(--cor-superficie); padding: 4px 16px 14px;
+    border-top: 1px solid var(--cor-borda); }
   .filtros { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
              align-items: center; }
   .filtros input[type=text] { flex: 1; min-width: 220px; }
-  .filtros .contagem { color: #667; font-size: 15px; margin-left: auto; }
+  .filtros .contagem { color: var(--cor-texto-fraco); font-size: 13px; margin-left: auto; }
   .oculto { display: none !important; }
   #carregando { text-align: center; padding: 60px 20px; }
-  .spinner { width: 46px; height: 46px; border: 5px solid #cfd8dc;
-             border-top-color: #1e5a8a; border-radius: 50%;
+  .spinner { width: 40px; height: 40px; border: 4px solid var(--cor-borda);
+             border-top-color: var(--cor-primaria); border-radius: 50%;
              animation: gira 1s linear infinite; margin: 0 auto 18px; }
   @keyframes gira { to { transform: rotate(360deg); } }
-  #tela-login { background: #fff; border-radius: 12px; padding: 30px;
-                text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-  #tela-login h2 { margin-bottom: 16px; }
-  #tela-login ol { text-align: left; display: inline-block; font-size: 19px;
+  #tela-login { background: var(--cor-superficie); border: 1px solid var(--cor-borda);
+                border-radius: var(--raio); padding: 30px; text-align: center; }
+  #tela-login h2 { margin-bottom: 16px; font-size: 18px; }
+  #tela-login ol { text-align: left; display: inline-block; font-size: 16px;
                    line-height: 2; }
-  #login-codigo { font-size: 34px; font-weight: 700; letter-spacing: 4px;
-                  background: #fff3cd; padding: 4px 14px; border-radius: 8px; }
-  #login-status { margin-top: 18px; color: #667; }
-  .rodape { text-align: center; color: #99a; font-size: 13px; margin-top: 30px; }
+  #login-codigo { font-size: 28px; font-weight: 700; letter-spacing: 3px;
+                  background: var(--cor-alerta-fundo); color: var(--cor-alerta);
+                  padding: 4px 14px; border-radius: var(--raio-pequeno); }
+  #login-status { margin-top: 18px; color: var(--cor-texto-fraco); }
+  .rodape { text-align: center; color: var(--cor-texto-fraco); font-size: 12.5px; margin-top: 30px; }
   #banner-offline { position: fixed; top: 0; left: 0; right: 0; z-index: 10;
-                    background: #c62828; color: #fff; text-align: center;
-                    padding: 12px 16px; font-size: 17px; }
-  .nota { color: #667; font-size: 14px; margin: 6px 0; }
+                    background: var(--cor-erro); color: #fff; text-align: center;
+                    padding: 12px 16px; font-size: 14.5px; }
+  .nota { color: var(--cor-texto-fraco); font-size: 13px; margin: 6px 0; }
 
-  .segmentado { display: inline-flex; background: #f4f6f8; border-radius: 9px;
+  .segmentado { display: inline-flex; background: var(--cor-fundo);
+    border: 1px solid var(--cor-borda); border-radius: var(--raio);
     padding: 3px; margin-bottom: 16px; gap: 2px; }
-  .segmentado button { border: none; background: transparent; font-size: 14.5px;
-    padding: 8px 16px; border-radius: 7px; cursor: pointer; color: #667;
-    font-family: inherit; }
-  .segmentado button.ativa { background: #fff; color: #223; font-weight: 600;
-    box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+  .segmentado button { border: none; background: transparent; font-size: 13px;
+    padding: 7px 14px; border-radius: var(--raio-pequeno); cursor: pointer;
+    color: var(--cor-texto-fraco); font-family: inherit; }
+  .segmentado button.ativa { background: var(--cor-superficie); color: var(--cor-texto);
+    font-weight: 600; }
 
   .grade-meses-fin { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 14px; }
-  .mes-card-fin { border: 1px solid #e1e0d9; border-radius: 10px; padding: 14px 16px; }
-  .mes-card-fin h3 { font-size: 15px; text-transform: uppercase; letter-spacing: .04em;
-    color: #667; font-weight: 600; margin: 0 0 12px; }
+    gap: 12px; }
+  .mes-card-fin { border: 1px solid var(--cor-borda); border-radius: var(--raio);
+    padding: 14px 16px; }
+  .mes-card-fin h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
+    color: var(--cor-texto-fraco); font-weight: 700; margin: 0 0 12px; }
   .funil-linha { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .funil-rot { width: 74px; font-size: 12.5px; color: #667; flex-shrink: 0; }
-  .funil-trilho { flex: 1; background: #e1e0d9; border-radius: 3px; height: 16px;
+  .funil-rot { width: 74px; font-size: 12px; color: var(--cor-texto-fraco); flex-shrink: 0; }
+  .funil-trilho { flex: 1; background: var(--cor-fundo); border-radius: 3px; height: 14px;
     position: relative; overflow: hidden; }
   .funil-barra { display: block; height: 100%; border-radius: 3px; }
-  .funil-num { width: 40px; text-align: right; font-size: 13px; font-weight: 600;
+  .funil-num { width: 40px; text-align: right; font-size: 12.5px; font-weight: 600;
     font-variant-numeric: tabular-nums; flex-shrink: 0; }
-  .divisor { height: 1px; background: #e1e0d9; margin: 14px 0 12px; }
-  .pago-rot { font-size: 12.5px; color: #667; margin-bottom: 6px;
+  .divisor { height: 1px; background: var(--cor-borda); margin: 14px 0 12px; }
+  .pago-rot { font-size: 12px; color: var(--cor-texto-fraco); margin-bottom: 6px;
     display: flex; justify-content: space-between; }
-  .pago-rot b { color: #223; font-variant-numeric: tabular-nums; }
-  .barra-empilhada { display: flex; height: 22px; border-radius: 4px; overflow: hidden;
-    background: #e1e0d9; }
+  .pago-rot b { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
+  .barra-empilhada { display: flex; height: 20px; border-radius: 3px; overflow: hidden;
+    background: var(--cor-fundo); }
   .seg { height: 100%; cursor: pointer; border-right: 2px solid #fff; }
   .seg:last-child { border-right: none; }
   .seg:hover { filter: brightness(1.12); }
 
   .fornecedor-cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
     margin-bottom: 20px; }
-  .badge-alerta { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px;
-    font-weight: 600; color: #b24a2c; background: #fbe6dd; padding: 6px 12px;
-    border-radius: 20px; }
+  .badge-alerta { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
+    font-weight: 600; color: var(--cor-erro); background: var(--cor-erro-fundo);
+    padding: 5px 10px; border-radius: var(--raio-pequeno); }
   .badge-alerta::before { content: "!"; display: inline-flex; align-items: center;
-    justify-content: center; width: 16px; height: 16px; border-radius: 50%;
-    background: #c25b39; color: #fff; font-size: 11px; font-weight: 800; }
+    justify-content: center; width: 15px; height: 15px; border-radius: 50%;
+    background: var(--cor-erro); color: var(--cor-texto-claro); font-size: 10.5px; font-weight: 800; }
 
   .grade-donuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 18px 10px; text-align: center; }
-  .mes-donut .rot-mes { font-size: 12px; color: #667; font-weight: 600; margin-bottom: 8px; }
+  .mes-donut .rot-mes { font-size: 11.5px; color: var(--cor-texto-fraco); font-weight: 600;
+    margin-bottom: 8px; text-transform: uppercase; letter-spacing: .03em; }
   .mes-donut .donut-wrap { position: relative; width: 104px; height: 104px; margin: 0 auto; }
   .mes-donut .donut-wrap svg circle.fatia { cursor: pointer; }
   .mes-donut .donut-wrap svg circle.fatia:hover { filter: brightness(1.15); }
   .mes-donut .donut-centro { position: absolute; inset: 0; display: flex; flex-direction: column;
     align-items: center; justify-content: center; pointer-events: none; }
-  .mes-donut .donut-centro b { font-size: 19px; font-variant-numeric: tabular-nums; line-height: 1; }
-  .mes-donut .donut-centro small { font-size: 10px; color: #99a; margin-top: 2px; }
-  .mes-donut .rot-fornecedor { margin-top: 8px; font-size: 13px; font-weight: 700;
+  .mes-donut .donut-centro b { font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1;
+    color: var(--cor-texto); }
+  .mes-donut .donut-centro small { font-size: 9.5px; color: var(--cor-texto-fraco); margin-top: 2px; }
+  .mes-donut .rot-fornecedor { margin-top: 8px; font-size: 12.5px; font-weight: 700;
     font-variant-numeric: tabular-nums; }
-  .mes-donut .rot-valor { font-size: 11.5px; color: #99a;
+  .mes-donut .rot-valor { font-size: 11px; color: var(--cor-texto-fraco);
     font-variant-numeric: tabular-nums; margin-top: 1px; }
 
   .legenda { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 18px;
-    padding-top: 16px; border-top: 1px solid #e1e0d9; font-size: 13.5px; }
-  .legenda span { display: inline-flex; align-items: center; gap: 7px; color: #667; }
-  .ponto { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    padding-top: 16px; border-top: 1px solid var(--cor-borda); font-size: 12.5px; }
+  .legenda span { display: inline-flex; align-items: center; gap: 7px; color: var(--cor-texto-fraco); }
+  .ponto { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 
-  .tooltip-fin { position: fixed; pointer-events: none; background: #223;
-    color: #fff; font-size: 13px; padding: 7px 11px; border-radius: 7px;
+  .tooltip-fin { position: fixed; pointer-events: none; background: var(--cor-navy);
+    color: var(--cor-texto-claro); font-size: 12.5px; padding: 7px 11px; border-radius: var(--raio-pequeno);
     box-shadow: 0 4px 14px rgba(0,0,0,.25); opacity: 0; transform: translateY(4px);
     transition: opacity .1s, transform .1s; z-index: 20; white-space: nowrap; }
   .tooltip-fin.on { opacity: 1; transform: translateY(0); }
@@ -158,22 +202,41 @@
   .transacoes-cabeca { display: flex; flex-wrap: wrap; align-items: center;
     justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   .transacoes-cabeca h2 { margin: 0; }
-  .transacoes-cabeca button { border: 1px solid #dcdad0; background: #fff; color: #667;
-    border-radius: 7px; padding: 6px 14px; cursor: pointer; font-family: inherit; font-size: 13.5px; }
+  .transacoes-cabeca button { border: 1px solid var(--cor-borda); background: var(--cor-superficie);
+    color: var(--cor-texto-fraco); border-radius: var(--raio-pequeno); padding: 6px 12px;
+    cursor: pointer; font-family: inherit; font-size: 12.5px; }
   #transacoes-corpo-fin { overflow-x: auto; }
-  #transacoes-corpo-fin td.muted { color: #99a; font-size: 12.5px; }
+  #transacoes-corpo-fin td.muted { color: var(--cor-texto-fraco); font-size: 12px; }
 
-  .import-resumo { color: #667; font-size: 14.5px; margin: 4px 0 10px; }
-  .grade-importacoes { display: flex; flex-direction: column; gap: 10px; }
+  .import-resumo { color: var(--cor-texto-fraco); font-size: 13px; margin: 4px 0 10px; }
+  .grade-importacoes { display: flex; flex-direction: column; gap: 8px; }
   .card-import { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
-    background: #fff; border-radius: 10px; padding: 12px 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.08); border-left: 5px solid #1e5a8a; }
-  .card-import.st-nao_identificado { border-left-color: #b26a00; }
-  .card-import.st-erro { border-left-color: #c62828; }
-  .card-import .ci-arquivo { font-weight: 600; flex: 1 1 220px; min-width: 180px; }
-  .card-import .ci-tipo { color: #1e5a8a; font-size: 14px; }
-  .card-import .ci-resumo { color: #667; font-size: 14px; }
-  .card-import .ci-motivo { color: #667; font-size: 13.5px; flex: 2 1 280px; }
+    background: var(--cor-superficie); border: 1px solid var(--cor-borda);
+    border-left: 3px solid var(--cor-primaria); border-radius: var(--raio-pequeno);
+    padding: 11px 14px; }
+  .card-import.st-nao_identificado { border-left-color: var(--cor-alerta); }
+  .card-import.st-erro { border-left-color: var(--cor-erro); }
+  .card-import .ci-arquivo { font-weight: 600; font-size: 13.5px; flex: 1 1 220px;
+    min-width: 180px; }
+  .card-import .ci-tipo { color: var(--cor-primaria); font-size: 12.5px; font-weight: 600; }
+  .card-import .ci-resumo { color: var(--cor-texto-fraco); font-size: 12.5px; }
+  .card-import .ci-motivo { color: var(--cor-texto-fraco); font-size: 12.5px; flex: 2 1 280px; }
+
+  .grade-fornecedores-fin { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap: 12px; }
+  .resumo-fornecedor-fin { border: 1px solid var(--cor-borda); border-radius: var(--raio);
+    padding: 14px 16px; }
+  .resumo-fornecedor-fin h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--cor-texto-fraco); font-weight: 700; margin-bottom: 8px; }
+  .resumo-fornecedor-fin .num-grande { font-size: 22px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--cor-texto); }
+  .resumo-fornecedor-fin .num-sub { font-size: 12px; color: var(--cor-texto-fraco); margin-top: 2px; }
+  .doc-fin-lista details { margin-bottom: 6px; }
+  .doc-fin-lista summary { display: flex; align-items: center; gap: 12px;
+    font-weight: 400; font-size: 13.5px; }
+  .doc-fin-lista summary .doc-tipo { color: var(--cor-primaria); font-weight: 600; flex: 1; }
+  .doc-fin-lista summary .doc-data { color: var(--cor-texto-fraco); width: 90px; flex-shrink: 0; }
+  .doc-fin-lista summary .doc-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -191,8 +254,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
     </select>
   </label>
   <button id="btn-atualizar" onclick="carregar()">&#8635; Atualizar</button>
-  <button id="btn-sair" onclick="encerrar()" title="Fecha o painel por completo"
-    style="background:#16466c;color:#dfe9f2;border:1px solid #3a6d99">
+  <button id="btn-sair" onclick="encerrar()" title="Fecha o painel por completo">
     Encerrar</button>
   <div class="sub" id="subtitulo">&nbsp;</div>
 </header>
@@ -269,7 +331,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   </div>
 
   <div id="aba-financeiro" class="oculto">
-    <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
+    <div id="sec-financeiro"><p class="nota">Carregando&hellip;</p></div>
 
     <div id="sec-orfaos"></div>
   </div>
@@ -530,13 +592,13 @@ function renderExames() {
           ? "<span class='badge b-provavel' title='O pagador responsável " +
             "já cobre exames desta data e este não apareceu nos " +
             "demonstrativos recebidos'>sem registro</span>"
-          : "<span style='color:#99a'>aguardando ciclo</span>"));
+          : "<span style='color:var(--cor-texto-fraco)'>aguardando ciclo</span>"));
     return "<tr><td class='codigo'>" + esc(e.codigo) + "</td>" +
       "<td>" + esc(e.nome || "(sem nome)") + "</td>" +
       "<td>" + esc(e.empresa) + "</td>" +
       "<td>" + dataBr(e.recebido) + "</td>" +
       "<td>" + (e.prazo ? dataBr(e.prazo)
-                        : "<span style='color:#99a'>sem prazo</span>") + "</td>" +
+                        : "<span style='color:var(--cor-texto-fraco)'>sem prazo</span>") + "</td>" +
       "<td><span class='badge b-" + e.status + "'>" +
         ROTULOS[e.status] + "</span></td>" +
       "<td>" + (e.retornado_em ? dataBr(e.retornado_em) : "") + "</td>" +
@@ -568,7 +630,7 @@ function linhaExame(ex, extra) {
   const prazo = ex.prazo
     ? (ex.atrasado ? "<span class='alerta'>" + dataBr(ex.prazo) + "</span>"
                    : dataBr(ex.prazo))
-    : "<span style='color:#99a'>não informado</span>";
+    : "<span style='color:var(--cor-texto-fraco)'>não informado</span>";
   return "<tr><td class='codigo'>" + esc(ex.codigo) + "</td>" +
     "<td>" + esc(ex.nome || "(nome não identificado)") + "</td>" +
     "<td>" + esc(ex.fonte) + "</td>" +
@@ -703,7 +765,7 @@ function render() {
       "<th>Data do exame</th><th>Documento</th></tr>" +
       dados.pagamentos_orfaos.map(o =>
         "<tr><td>" + esc(o.empresa) + "</td><td>" + esc(o.nome) + "</td><td>" +
-        dataBr(o.data) + "</td><td style='font-size:13px;color:#667'>" +
+        dataBr(o.data) + "</td><td style='font-size:13px;color:var(--cor-texto-fraco)'>" +
         esc(o.origem) + "</td></tr>").join("") + "</table></div></details>";
   } else {
     orf.innerHTML = "";
@@ -758,56 +820,116 @@ function verFaltando() {
 
 function brlSeguro(v) { return v == null ? "" : brl(v); }
 
+const TIPO_AMIGAVEL_FIN = {
+  IDS: "IDS · Repasse por unidade",
+  Unimed: "Unimed · Demonstrativo",
+  CardioPro: "CardioPro · Planilha",
+};
+
+function periodoBr(p) {
+  const m = String(p || "").match(/^(\d{4})(\d{2})$/);
+  return m ? m[2] + "/" + m[1] : (p || "");
+}
+
+function dataDocumentoFin(doc) {
+  if (doc.emitido_em) return doc.emitido_em;
+  if (doc.periodo) return periodoBr(doc.periodo);
+  return "";
+}
+
+function resumoDocumentoFin(doc) {
+  if (doc.total) return { qtd: doc.total.qtd, valor: doc.total.valor };
+  if (doc.meses) {
+    const qtd = doc.meses.reduce((s, m) => s + m.ecg + m.mapa, 0);
+    return { qtd, valor: null };
+  }
+  const qtd = doc.linhas.reduce((s, l) => s + l.qtd, 0);
+  const valor = doc.liquido != null ? doc.liquido
+    : doc.linhas.some(l => l.valor != null)
+      ? doc.linhas.reduce((s, l) => s + (l.valor || 0), 0)
+      : null;
+  return { qtd, valor };
+}
+
+function detalheDocumentoFin(doc) {
+  let h = "";
+  if (doc.meses) {
+    h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
+      doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
+        m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") + "</table>";
+  } else {
+    h += "<table><tr><th>Tipo</th>" +
+      (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
+      "<th>Qtd</th><th>Valor</th></tr>" +
+      doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
+        (doc.linhas.some(x => x.detalhe)
+          ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
+        "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
+        .join("") + "</table>";
+  }
+  if (doc.executantes) {
+    h += "<p class='nota' style='margin-top:8px'>" + doc.executantes.map(e =>
+      esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
+      ")").join(" · ") + "</p>";
+    if (doc.bruto) {
+      h += "<p style='margin-top:4px'><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
+        " · Líquido: " + brlSeguro(doc.liquido) + "</b></p>";
+    }
+  }
+  return h;
+}
+
+function chaveDataFin(doc) {
+  if (doc.emitido_em) {
+    const p = doc.emitido_em.split("/");
+    return p[2] + p[1] + p[0];
+  }
+  return doc.periodo || "";
+}
+
 async function carregarFinanceiro() {
   const sec = document.getElementById("sec-financeiro");
   try {
     const f = await (await fetch("/api/financeiro")).json();
-    const nomes = Object.keys(f.empresas || {});
+    const nomes = ["IDS", "Unimed", "CardioPro"].filter(n => f.empresas[n]);
     if (!nomes.length) {
       sec.innerHTML = "<p class='nota'>Nenhum demonstrativo na pasta " +
         "repasses ainda.</p>";
       return;
     }
-    let h = "<h2>Produção e pagamentos (demonstrativos recebidos)</h2>";
-    for (const nome of ["IDS", "Unimed", "CardioPro"]) {
+    let resumos = "<div class='grade-fornecedores-fin'>";
+    let listas = "";
+    for (const nome of nomes) {
       const emp = f.empresas[nome];
-      if (!emp) continue;
-      h += "<h3 style='margin:14px 0 6px'>" + esc(nome) + "</h3>";
-      for (const doc of emp.documentos) {
-        h += "<p class='nota'>" + esc(doc.arquivo) +
-          (doc.periodo ? " · período " + esc(doc.periodo) : "") +
-          (doc.emitido_em ? " · emitido " + esc(doc.emitido_em) : "") + "</p>";
-        if (doc.meses) {
-          h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
-            doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
-              m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") +
-            "</table>";
-        } else {
-          h += "<table><tr><th>Tipo</th>" +
-            (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
-            "<th>Qtd</th><th>Valor</th></tr>" +
-            doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
-              (doc.linhas.some(x => x.detalhe)
-                ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
-              "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
-              .join("") + "</table>";
-        }
-        if (doc.total && doc.total.qtd) {
-          h += "<p><b>Total do documento: " + doc.total.qtd + " exames · " +
-            brlSeguro(doc.total.valor) + "</b></p>";
-        }
-        if (doc.executantes) {
-          h += "<p style='font-size:15px'>" + doc.executantes.map(e =>
-            esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
-            ")").join(" · ") + "</p>";
-          if (doc.bruto) {
-            h += "<p><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
-              " · Líquido: " + brlSeguro(doc.liquido) + "</b></p>";
-          }
-        }
-      }
+      const docsOrdenados = emp.documentos.slice()
+        .sort((a, b) => chaveDataFin(b).localeCompare(chaveDataFin(a)));
+      let totalQtd = 0, totalValor = 0, temValor = false;
+      docsOrdenados.forEach(doc => {
+        const r = resumoDocumentoFin(doc);
+        totalQtd += r.qtd;
+        if (r.valor != null) { totalValor += r.valor; temValor = true; }
+      });
+      resumos += "<div class='resumo-fornecedor-fin'><h3>" + esc(nome) + "</h3>" +
+        "<div class='num-grande'>" + totalQtd + " exames</div>" +
+        "<div class='num-sub'>" + docsOrdenados.length + " documento" +
+        (docsOrdenados.length === 1 ? "" : "s") +
+        (temValor ? " · " + brl(totalValor) : "") + "</div></div>";
+      listas += "<section class='bloco'><h2>" + esc(nome) + "</h2>" +
+        "<div class='doc-fin-lista'>" +
+        docsOrdenados.map(doc => {
+          const r = resumoDocumentoFin(doc);
+          return "<details><summary>" +
+            "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
+            "<span class='doc-tipo'>" + esc(TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
+            "<span class='doc-num'>" + r.qtd + " exames" +
+            (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
+            "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
+            detalheDocumentoFin(doc) + "</div></details>";
+        }).join("") + "</div></section>";
     }
-    sec.innerHTML = h;
+    resumos += "</div>";
+    sec.innerHTML = "<section class='bloco'><h2>Produção e pagamentos " +
+      "(demonstrativos recebidos)</h2>" + resumos + "</section>" + listas;
   } catch (e) {
     sec.innerHTML = "<p class='nota'>Não consegui ler os demonstrativos.</p>";
   }
@@ -872,6 +994,7 @@ carregarImportacoes();
 const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
 const COR_OUTROS = "#8f8c81";
 const COR_SEM_LAUDO = "#e8dcc0";
+const CORES_FUNIL = [PALETA_FORNECEDOR[0], "#5598e7", "#86b6ef"];
 const MESES_NOME = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function formatMes(ym) {
@@ -883,7 +1006,7 @@ function montarDonutFin(total, fatias, size, largura) {
   if (!total) {
     return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size + "'>" +
       "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + (size - largura) / 2 +
-      "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/></svg>";
+      "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/></svg>";
   }
   const r = (size - largura) / 2;
   const circ = 2 * Math.PI * r;
@@ -902,7 +1025,7 @@ function montarDonutFin(total, fatias, size, largura) {
   }).join("");
   return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size +
     "' style='transform:rotate(-90deg)'><circle cx='" + size / 2 + "' cy='" + size / 2 +
-    "' r='" + r + "' fill='none' stroke='#e1e0d9' stroke-width='" + largura + "'/>" +
+    "' r='" + r + "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/>" +
     arcos + "</svg>";
 }
 
@@ -958,15 +1081,15 @@ function renderMesesFornecedor() {
     }).join("");
     return "<div class='mes-card-fin' data-mes=\"" + m.mes + "\"><h3>" + formatMes(m.mes) + "</h3>" +
       "<div class='funil-linha'><span class='funil-rot'>Realizados</span>" +
-      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:#2a78d6'></span></span>" +
+      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:" + CORES_FUNIL[0] + "'></span></span>" +
       "<span class='funil-num'>" + m.realizados + "</span></div>" +
       "<div class='funil-linha'><span class='funil-rot'>Laudados</span>" +
       "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.laudados / m.realizados) + "%;background:#5598e7'></span></span>" +
+      (100 * m.laudados / m.realizados) + "%;background:" + CORES_FUNIL[1] + "'></span></span>" +
       "<span class='funil-num'>" + m.laudados + "</span></div>" +
       "<div class='funil-linha'><span class='funil-rot'>Pagos</span>" +
       "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.pago_total / m.realizados) + "%;background:#86b6ef'></span></span>" +
+      (100 * m.pago_total / m.realizados) + "%;background:" + CORES_FUNIL[2] + "'></span></span>" +
       "<span class='funil-num'>" + m.pago_total + "</span></div>" +
       "<div class='divisor'></div>" +
       "<div class='pago-rot'><span>Pago por convênio</span><b>" + m.pago_total + " de " +
@@ -1144,7 +1267,7 @@ async function encerrar() {
   try { await fetch("/api/sair", {method: "POST"}); } catch (e) {}
   document.body.innerHTML =
     "<div style='text-align:center;padding:80px 20px;font-size:22px'>" +
-    "✔ Painel encerrado.<br><span style='font-size:17px;color:#667'>" +
+    "✔ Painel encerrado.<br><span style='font-size:17px;color:var(--cor-texto-fraco)'>" +
     "Pode fechar esta aba. Para abrir de novo, duplo clique no atalho " +
     "\"Painel MAPA\".</span></div>";
   setTimeout(() => window.close(), 800);

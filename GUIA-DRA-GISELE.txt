@@ -75,9 +75,11 @@ PARA DAR BAIXA EM UM EXAME
   3. Escreva o motivo e confirme. Ele sai da lista de pendentes.
 
 PARA VER OS PAGAMENTOS
-  Aba "Financeiro": producao e valores por empresa (IDS, Unimed,
-  CardioPro), mes a mes. Quando chegar o demonstrativo novo por
-  email, ele entra sozinho na proxima vez que o painel abrir.
+  Aba "Financeiro": um resumo por empresa (IDS, Unimed, CardioPro)
+  no topo, e embaixo a lista de documentos recebidos, do mais
+  recente pro mais antigo. Clique num documento pra abrir o
+  detalhamento dele. Quando chegar o demonstrativo novo por email,
+  ele entra sozinho na proxima vez que o painel abrir.
   Documento que NAO veio por email: salve o arquivo na pasta local
   de documentos (configurada no alto da aba Importacoes) e clique em
   Atualizar; o painel le de la tambem.
