@@ -77,7 +77,8 @@
            font-size: 13.5px; }
   th { color: var(--cor-texto-fraco); font-size: 11px; text-transform: uppercase;
        letter-spacing: .03em; font-weight: 700; position: sticky; top: 0;
-       background: var(--cor-superficie); z-index: 2; }
+       background: var(--cor-superficie); z-index: 2;
+       box-shadow: inset 0 -1px 0 var(--cor-borda); }
   tr:last-child td { border-bottom: none; }
   .codigo { font-family: Consolas, monospace; white-space: nowrap; font-size: 13px; }
   .btn-baixa { background: var(--cor-fundo); border: 1px solid var(--cor-borda);
@@ -878,6 +879,14 @@ function detalheDocumentoFin(doc) {
   return h;
 }
 
+function chaveDataFin(doc) {
+  if (doc.emitido_em) {
+    const p = doc.emitido_em.split("/");
+    return p[2] + p[1] + p[0];
+  }
+  return doc.periodo || "";
+}
+
 async function carregarFinanceiro() {
   const sec = document.getElementById("sec-financeiro");
   try {
@@ -892,7 +901,8 @@ async function carregarFinanceiro() {
     let listas = "";
     for (const nome of nomes) {
       const emp = f.empresas[nome];
-      const docsOrdenados = emp.documentos.slice().reverse();
+      const docsOrdenados = emp.documentos.slice()
+        .sort((a, b) => chaveDataFin(b).localeCompare(chaveDataFin(a)));
       let totalQtd = 0, totalValor = 0, temValor = false;
       docsOrdenados.forEach(doc => {
         const r = resumoDocumentoFin(doc);
@@ -984,6 +994,7 @@ carregarImportacoes();
 const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
 const COR_OUTROS = "#8f8c81";
 const COR_SEM_LAUDO = "#e8dcc0";
+const CORES_FUNIL = [PALETA_FORNECEDOR[0], "#5598e7", "#86b6ef"];
 const MESES_NOME = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function formatMes(ym) {
@@ -1070,15 +1081,15 @@ function renderMesesFornecedor() {
     }).join("");
     return "<div class='mes-card-fin' data-mes=\"" + m.mes + "\"><h3>" + formatMes(m.mes) + "</h3>" +
       "<div class='funil-linha'><span class='funil-rot'>Realizados</span>" +
-      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:#2a78d6'></span></span>" +
+      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:" + CORES_FUNIL[0] + "'></span></span>" +
       "<span class='funil-num'>" + m.realizados + "</span></div>" +
       "<div class='funil-linha'><span class='funil-rot'>Laudados</span>" +
       "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.laudados / m.realizados) + "%;background:#5598e7'></span></span>" +
+      (100 * m.laudados / m.realizados) + "%;background:" + CORES_FUNIL[1] + "'></span></span>" +
       "<span class='funil-num'>" + m.laudados + "</span></div>" +
       "<div class='funil-linha'><span class='funil-rot'>Pagos</span>" +
       "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.pago_total / m.realizados) + "%;background:#86b6ef'></span></span>" +
+      (100 * m.pago_total / m.realizados) + "%;background:" + CORES_FUNIL[2] + "'></span></span>" +
       "<span class='funil-num'>" + m.pago_total + "</span></div>" +
       "<div class='divisor'></div>" +
       "<div class='pago-rot'><span>Pago por convênio</span><b>" + m.pago_total + " de " +
