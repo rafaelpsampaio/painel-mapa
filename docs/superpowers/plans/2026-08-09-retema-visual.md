@@ -497,7 +497,7 @@ to:
     padding: 5px 10px; border-radius: var(--raio-pequeno); }
   .badge-alerta::before { content: "!"; display: inline-flex; align-items: center;
     justify-content: center; width: 15px; height: 15px; border-radius: 50%;
-    background: var(--cor-erro); color: #fff; font-size: 10.5px; font-weight: 800; }
+    background: var(--cor-erro); color: var(--cor-texto-claro); font-size: 10.5px; font-weight: 800; }
 
   .grade-donuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 18px 10px; text-align: center; }
@@ -522,7 +522,7 @@ to:
   .ponto { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 
   .tooltip-fin { position: fixed; pointer-events: none; background: var(--cor-navy);
-    color: #fff; font-size: 12.5px; padding: 7px 11px; border-radius: var(--raio-pequeno);
+    color: var(--cor-texto-claro); font-size: 12.5px; padding: 7px 11px; border-radius: var(--raio-pequeno);
     box-shadow: 0 4px 14px rgba(0,0,0,.25); opacity: 0; transform: translateY(4px);
     transition: opacity .1s, transform .1s; z-index: 20; white-space: nowrap; }
   .tooltip-fin.on { opacity: 1; transform: translateY(0); }
