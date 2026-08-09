@@ -220,6 +220,22 @@
   .card-import .ci-tipo { color: var(--cor-primaria); font-size: 12.5px; font-weight: 600; }
   .card-import .ci-resumo { color: var(--cor-texto-fraco); font-size: 12.5px; }
   .card-import .ci-motivo { color: var(--cor-texto-fraco); font-size: 12.5px; flex: 2 1 280px; }
+
+  .grade-fornecedores-fin { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
+    gap: 12px; }
+  .resumo-fornecedor-fin { border: 1px solid var(--cor-borda); border-radius: var(--raio);
+    padding: 14px 16px; }
+  .resumo-fornecedor-fin h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em;
+    color: var(--cor-texto-fraco); font-weight: 700; margin-bottom: 8px; }
+  .resumo-fornecedor-fin .num-grande { font-size: 22px; font-weight: 700;
+    font-variant-numeric: tabular-nums; color: var(--cor-texto); }
+  .resumo-fornecedor-fin .num-sub { font-size: 12px; color: var(--cor-texto-fraco); margin-top: 2px; }
+  .doc-fin-lista details { margin-bottom: 6px; }
+  .doc-fin-lista summary { display: flex; align-items: center; gap: 12px;
+    font-weight: 400; font-size: 13.5px; }
+  .doc-fin-lista summary .doc-tipo { color: var(--cor-primaria); font-weight: 600; flex: 1; }
+  .doc-fin-lista summary .doc-data { color: var(--cor-texto-fraco); width: 90px; flex-shrink: 0; }
+  .doc-fin-lista summary .doc-num { font-variant-numeric: tabular-nums; font-weight: 600; }
 </style>
 </head>
 <body>
@@ -314,7 +330,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   </div>
 
   <div id="aba-financeiro" class="oculto">
-    <section class="bloco" id="sec-financeiro"><p>Carregando&hellip;</p></section>
+    <div id="sec-financeiro"><p class="nota">Carregando&hellip;</p></div>
 
     <div id="sec-orfaos"></div>
   </div>
@@ -803,56 +819,107 @@ function verFaltando() {
 
 function brlSeguro(v) { return v == null ? "" : brl(v); }
 
+const TIPO_AMIGAVEL_FIN = {
+  IDS: "IDS · Repasse por unidade",
+  Unimed: "Unimed · Demonstrativo",
+  CardioPro: "CardioPro · Planilha",
+};
+
+function periodoBr(p) {
+  const m = String(p || "").match(/^(\d{4})(\d{2})$/);
+  return m ? m[2] + "/" + m[1] : (p || "");
+}
+
+function dataDocumentoFin(doc) {
+  if (doc.emitido_em) return doc.emitido_em;
+  if (doc.periodo) return periodoBr(doc.periodo);
+  return "";
+}
+
+function resumoDocumentoFin(doc) {
+  if (doc.total) return { qtd: doc.total.qtd, valor: doc.total.valor };
+  if (doc.meses) {
+    const qtd = doc.meses.reduce((s, m) => s + m.ecg + m.mapa, 0);
+    return { qtd, valor: null };
+  }
+  const qtd = doc.linhas.reduce((s, l) => s + l.qtd, 0);
+  const valor = doc.liquido != null ? doc.liquido
+    : doc.linhas.some(l => l.valor != null)
+      ? doc.linhas.reduce((s, l) => s + (l.valor || 0), 0)
+      : null;
+  return { qtd, valor };
+}
+
+function detalheDocumentoFin(doc) {
+  let h = "";
+  if (doc.meses) {
+    h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
+      doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
+        m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") + "</table>";
+  } else {
+    h += "<table><tr><th>Tipo</th>" +
+      (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
+      "<th>Qtd</th><th>Valor</th></tr>" +
+      doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
+        (doc.linhas.some(x => x.detalhe)
+          ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
+        "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
+        .join("") + "</table>";
+  }
+  if (doc.executantes) {
+    h += "<p class='nota' style='margin-top:8px'>" + doc.executantes.map(e =>
+      esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
+      ")").join(" · ") + "</p>";
+    if (doc.bruto) {
+      h += "<p style='margin-top:4px'><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
+        " · Líquido: " + brlSeguro(doc.liquido) + "</b></p>";
+    }
+  }
+  return h;
+}
+
 async function carregarFinanceiro() {
   const sec = document.getElementById("sec-financeiro");
   try {
     const f = await (await fetch("/api/financeiro")).json();
-    const nomes = Object.keys(f.empresas || {});
+    const nomes = ["IDS", "Unimed", "CardioPro"].filter(n => f.empresas[n]);
     if (!nomes.length) {
       sec.innerHTML = "<p class='nota'>Nenhum demonstrativo na pasta " +
         "repasses ainda.</p>";
       return;
     }
-    let h = "<h2>Produção e pagamentos (demonstrativos recebidos)</h2>";
-    for (const nome of ["IDS", "Unimed", "CardioPro"]) {
+    let resumos = "<div class='grade-fornecedores-fin'>";
+    let listas = "";
+    for (const nome of nomes) {
       const emp = f.empresas[nome];
-      if (!emp) continue;
-      h += "<h3 style='margin:14px 0 6px'>" + esc(nome) + "</h3>";
-      for (const doc of emp.documentos) {
-        h += "<p class='nota'>" + esc(doc.arquivo) +
-          (doc.periodo ? " · período " + esc(doc.periodo) : "") +
-          (doc.emitido_em ? " · emitido " + esc(doc.emitido_em) : "") + "</p>";
-        if (doc.meses) {
-          h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
-            doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
-              m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") +
-            "</table>";
-        } else {
-          h += "<table><tr><th>Tipo</th>" +
-            (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
-            "<th>Qtd</th><th>Valor</th></tr>" +
-            doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
-              (doc.linhas.some(x => x.detalhe)
-                ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
-              "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
-              .join("") + "</table>";
-        }
-        if (doc.total && doc.total.qtd) {
-          h += "<p><b>Total do documento: " + doc.total.qtd + " exames · " +
-            brlSeguro(doc.total.valor) + "</b></p>";
-        }
-        if (doc.executantes) {
-          h += "<p style='font-size:15px'>" + doc.executantes.map(e =>
-            esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
-            ")").join(" · ") + "</p>";
-          if (doc.bruto) {
-            h += "<p><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
-              " · Líquido: " + brlSeguro(doc.liquido) + "</b></p>";
-          }
-        }
-      }
+      const docsOrdenados = emp.documentos.slice().reverse();
+      let totalQtd = 0, totalValor = 0, temValor = false;
+      docsOrdenados.forEach(doc => {
+        const r = resumoDocumentoFin(doc);
+        totalQtd += r.qtd;
+        if (r.valor != null) { totalValor += r.valor; temValor = true; }
+      });
+      resumos += "<div class='resumo-fornecedor-fin'><h3>" + esc(nome) + "</h3>" +
+        "<div class='num-grande'>" + totalQtd + " exames</div>" +
+        "<div class='num-sub'>" + docsOrdenados.length + " documento" +
+        (docsOrdenados.length === 1 ? "" : "s") +
+        (temValor ? " · " + brl(totalValor) : "") + "</div></div>";
+      listas += "<section class='bloco'><h2>" + esc(nome) + "</h2>" +
+        "<div class='doc-fin-lista'>" +
+        docsOrdenados.map(doc => {
+          const r = resumoDocumentoFin(doc);
+          return "<details><summary>" +
+            "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
+            "<span class='doc-tipo'>" + esc(TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
+            "<span class='doc-num'>" + r.qtd + " exames" +
+            (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
+            "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
+            detalheDocumentoFin(doc) + "</div></details>";
+        }).join("") + "</div></section>";
     }
-    sec.innerHTML = h;
+    resumos += "</div>";
+    sec.innerHTML = "<section class='bloco'><h2>Produção e pagamentos " +
+      "(demonstrativos recebidos)</h2>" + resumos + "</section>" + listas;
   } catch (e) {
     sec.innerHTML = "<p class='nota'>Não consegui ler os demonstrativos.</p>";
   }
