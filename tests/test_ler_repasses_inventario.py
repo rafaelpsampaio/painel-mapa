@@ -285,3 +285,24 @@ def test_relatorio_sem_texto_continua_nao_identificado():
     caminho = os.path.join(AMOSTRAS, "RELATORIO SEM TEXTO.pdf")
     item = lr._inspecionar_arquivo(caminho)
     assert item["status"] == "nao_identificado"
+
+
+def test_financeiro_relatorio_repasses():
+    """Testa a agregacao do relatorio de repasses na estrutura de financeiro."""
+    resultado = lr.financeiro(pastas=("amostras",))
+    empresas = resultado["empresas"]
+    assert "IDS" in empresas
+    ids_docs = empresas["IDS"]["documentos"]
+    # Encontra o documento do relatorio de repasses entre os docs da IDS
+    doc_relatorio = None
+    for doc in ids_docs:
+        if doc["arquivo"] == "RELATORIO REPASSES - MIBI PCT.pdf":
+            doc_relatorio = doc
+            break
+    assert doc_relatorio is not None, "documento do relatorio nao encontrado em IDS"
+    assert doc_relatorio["total"] == {"qtd": 17, "valor": 1680.11}
+    assert doc_relatorio["emitido_em"] == "22 out 2025"
+    assert doc_relatorio["periodo"] == "01/01/2025 a 31/05/2025"
+    # Verifica que as linhas agregam 17 procedimentos
+    total_qtd = sum(linha["qtd"] for linha in doc_relatorio["linhas"])
+    assert total_qtd == 17

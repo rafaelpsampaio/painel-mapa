@@ -190,7 +190,7 @@ Registrar nos três pontos:
                 p["valor"] += it["valor"]
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
-                "emitido_em": None,
+                "emitido_em": r.get("emitido_em"),
                 "periodo": r.get("periodo"),
                 "linhas": [{"tipo": proc.title(), "qtd": p["qtd"],
                             "valor": p["valor"]}
