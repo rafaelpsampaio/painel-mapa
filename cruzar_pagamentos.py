@@ -10,19 +10,14 @@ Uso: py cruzar_pagamentos.py [--dias 95]
 """
 
 import argparse
-import difflib
 import glob
 import os
-import re
 from datetime import datetime, timedelta
 
-import openpyxl
-
 import rotina_pendencias as rp
-from ler_repasses import (texto_pdf, dinheiro, SETOR_EXAME_LISTAGEM,
-                           _regex_tolerante, processar_listagem_exames,
-                           pastas_padrao)
-from eventos import separar_convenio
+from ler_repasses import processar_listagem_exames, pastas_padrao
+from eventos import (casa_nome, data_de, data_valida, itens_ids,
+                     itens_ids_setores, itens_unimed, itens_cardiopro)
 
 PASTA = "amostras"
 
@@ -41,78 +36,8 @@ ORDEM_PAGADOR = {"IDS": 0, "Unimed": 1, "CardioPro": 2}
 # janela de cobertura usada no alerta "sem registro", por fonte do exame
 PAGADOR_PRIMARIO = {"IDS": "IDS", "Unimed": "Unimed", "CardioPro": "Unimed"}
 
-def data_de(v):
-    if hasattr(v, "year"):
-        return datetime(v.year, v.month, v.day)
-    try:
-        return datetime.strptime(str(v)[:10], "%d/%m/%Y")
-    except ValueError:
-        return None
-
-
-def data_valida(d):
-    """Descarta datas absurdas digitadas errado nos demonstrativos."""
-    return (d is not None
-            and datetime(2024, 1, 1) <= d <= datetime.now() + timedelta(days=45))
-
 
 # ---------------- pagamentos: extracao de itens (nome + data) ----------------
-def itens_ids(caminho):
-    txt = texto_pdf(caminho)
-    if "Listagem de Repasse" not in txt:
-        return []
-    itens = []
-    for linha in txt.splitlines():
-        m = re.match(r"(\d{2}/\d{2}/\d{4})\s+(.+?)\s*M\.A\.P\.A", linha.strip())
-        if m:
-            mv = re.search(r"R\$\s*([\d\.]+,\d{2})", linha)
-            valor = (float(mv.group(1).replace(".", "").replace(",", "."))
-                     if mv else None)
-            itens.append({"empresa": "IDS", "mod": "MAPA",
-                          "data": data_de(m.group(1)),
-                          "nome": m.group(2),  # nome + convenio grudados
-                          "valor": valor,
-                          "origem": os.path.basename(caminho)})
-    return itens
-
-
-def itens_ids_setores(caminho):
-    """Itens de pagamento por paciente da Listagem de Repasse da IDS, para os
-    setores que NAO sao MAPA (Teste Ergometrico, MIBI, ECG, Laudo Stress...).
-    Cabecalho da tabela no PDF: Data Paciente Convenio Exame Pre-Labore Quant."""
-    txt = texto_pdf(caminho)
-    if "Listagem de Repasse" not in txt:
-        return []
-    itens = []
-    setor_atual = None
-    for linha in txt.splitlines():
-        linha = linha.strip()
-        m = re.match(r"Setor: (?!Selecionado)(.+)", linha)
-        if m:
-            setor_atual = m.group(1).strip()
-            continue
-        if not setor_atual or setor_atual == "MAPA":
-            continue
-        exame_canonico = SETOR_EXAME_LISTAGEM.get(setor_atual)
-        if not exame_canonico:
-            continue
-        padrao = (r"^(\d{2}/\d{2}/\d{4})\s+(.+?)\s+" +
-                  _regex_tolerante(exame_canonico) +
-                  r"\s+R\s*\$\s*([\d\.]+\s*,\s*\d{2})\s+\d+\s*$")
-        m = re.match(padrao, linha)
-        if not m:
-            continue
-        nome = m.group(2).strip()
-        itens.append({
-            "empresa": "IDS", "mod": setor_atual,
-            "data": data_de(m.group(1)), "nome": nome,
-            "valor": dinheiro(re.sub(r"\s+", "", m.group(3))),
-            "origem": os.path.basename(caminho),
-            "convenio": separar_convenio(nome)[1],
-        })
-    return itens
-
-
 def coletar_itens_setores(pastas=None):
     """Pagamentos por paciente dos setores nao-MAPA, deduplicados por
     setor+nome+data (independente do coletar_itens() usado pelo MAPA)."""
@@ -272,77 +197,7 @@ def agregar_por_mes_fornecedor(pastas=None):
             "fornecedores": fornecedores}
 
 
-def itens_unimed(caminho):
-    """No PDF da Unimed cada campo sai numa linha:
-    ... NOME / UF / plano(A|E) / data / 20102038-SERVICO"""
-    txt = texto_pdf(caminho)
-    if "UNIMED" not in txt.upper():
-        return []
-    linhas = [l.strip() for l in txt.splitlines()]
-    itens = []
-    for i, linha in enumerate(linhas):
-        if not linha.startswith("20102038") or i < 4:
-            continue
-        data = data_de(linhas[i - 1])
-        if not data:
-            continue
-        # nome: linhas alfabeticas logo acima do codigo de plano (i-3)
-        partes = []
-        j = i - 4
-        while j >= 0 and len(partes) < 3:
-            cand = linhas[j]
-            if not cand or re.search(r"\d", cand):
-                break  # protocolo/lote ou vazio: acabou o nome
-            partes.insert(0, cand)
-            j -= 1
-        nome = " ".join(partes).strip()
-        if len(nome.split()) >= 2:
-            itens.append({"empresa": "Unimed", "mod": "MAPA", "data": data,
-                          "nome": nome,
-                          "origem": os.path.basename(caminho)})
-    return itens
-
-
-def itens_cardiopro(caminho):
-    wb = openpyxl.load_workbook(caminho, data_only=True)
-    if not any("repasse" in aba.lower() for aba in wb.sheetnames):
-        return []  # planilha de outro formato
-    itens = []
-    for aba in wb.sheetnames:
-        for row in wb[aba].iter_rows(values_only=True):
-            cells = list(row)
-            for i, c in enumerate(cells):
-                v = str(c).strip() if c is not None else ""
-                if v != "20102038":
-                    continue
-                nome = cells[i + 1] if i + 1 < len(cells) else None
-                nome = str(nome).strip() if nome else ""
-                if len(nome.split()) < 2:
-                    continue
-                data = None
-                for c2 in cells[i + 2:i + 6]:
-                    d = data_de(c2) if c2 is not None else None
-                    if d:
-                        data = d
-                        break
-                itens.append({"empresa": "CardioPro", "mod": "MAPA",
-                              "data": data, "nome": nome,
-                              "origem": f"{os.path.basename(caminho)} [{aba}]"})
-    return itens
-
-
 # ---------------- pareamento ----------------
-def casa_nome(nome_email, nome_pag):
-    """nome_pag pode vir com o convenio grudado no fim (IDS)."""
-    a = rp.normalizar(nome_email or "")
-    b = rp.normalizar(nome_pag or "")
-    if len(a.split()) < 2 or not b:
-        return False
-    if b.startswith(a) or a in b:
-        return True
-    return difflib.SequenceMatcher(None, a, b[:len(a) + 4]).ratio() >= 0.85
-
-
 def coletar_itens(pastas=None):
     """Todos os itens de pagamento MAPA dos demonstrativos, deduplicados."""
     from ler_repasses import pastas_padrao
@@ -356,7 +211,9 @@ def coletar_itens(pastas=None):
             if arq in vistos_arq:
                 continue
             if caminho.lower().endswith(".pdf"):
-                novos = itens_ids(caminho) or itens_unimed(caminho)
+                novos = (itens_ids(caminho)
+                         or [i for i in itens_unimed(caminho)
+                             if i["mod"] == "MAPA"])
             elif caminho.lower().endswith(".xlsx"):
                 novos = itens_cardiopro(caminho)
             else:

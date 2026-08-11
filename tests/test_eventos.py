@@ -1,4 +1,9 @@
+import os
+from datetime import datetime
+
 import eventos as ev
+
+AMOSTRAS = "amostras"
 
 
 def test_exame_canonico_mapeia_setores_e_procedimentos():
@@ -33,3 +38,35 @@ def test_separar_convenio_ausente():
     nome, conv = ev.separar_convenio("JOSE PEREIRA")
     assert nome == "JOSE PEREIRA"
     assert conv is None
+
+
+def test_itens_relatorio():
+    itens = ev.itens_relatorio(
+        os.path.join(AMOSTRAS, "RELATORIO REPASSES - MIBI PCT.pdf"))
+    assert len(itens) == 17
+    assert itens[0] == {
+        "empresa": "IDS", "mod": "TESTE ERGOMETRICO MIBI",
+        "data": datetime(2025, 1, 7), "nome": "ODAIL JOSE DENDEVITE",
+        "valor": 98.83, "convenio": "Unimed",
+        "origem": "RELATORIO REPASSES - MIBI PCT.pdf"}
+
+
+def test_itens_unimed_todos_os_codigos():
+    itens = ev.itens_unimed(
+        os.path.join(AMOSTRAS, "ExibeDemonstrativoPdf.pdf"))
+    mods = {i["mod"] for i in itens}
+    assert "MAPA" in mods
+    assert "Consulta" in mods
+    assert "Eletrocardiograma" in mods
+    consulta = next(i for i in itens if i["mod"] == "Consulta")
+    assert consulta["empresa"] == "Unimed"
+    assert consulta["valor"] is not None and consulta["valor"] > 0
+    assert len(consulta["nome"].split()) >= 2
+
+
+def test_itens_ids_setores_tem_convenio_separado():
+    itens = ev.itens_ids_setores(
+        os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"))
+    assert itens
+    com_convenio = [i for i in itens if i["convenio"]]
+    assert com_convenio, "esperava ao menos um item com convenio reconhecido"
