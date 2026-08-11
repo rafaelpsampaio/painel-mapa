@@ -251,6 +251,56 @@ def processar_listagem_exames(caminho):
     return resumo
 
 
+# ------------------------------------------ IDS Relatorio de Repasses
+PROCEDIMENTOS_RELATORIO = (
+    "TESTE ERGOMETRICO MIBI",
+    "LAUDO STRESS FARMACOLOGICO",
+    "TESTE ERGOMETRICO",
+    "ELETROCARDIOGRAMA",
+    "M.A.P.A",
+    "MAPA",
+)
+_PROC_ALT = "|".join(re.escape(p) for p in PROCEDIMENTOS_RELATORIO)
+LINHA_RELATORIO_RE = re.compile(
+    r"^(?P<data>\d{2}/\d{2}/\d{4})\s+(?P<pac>.+?)\s+"
+    rf"(?P<proc>{_PROC_ALT})\s+"
+    r"(?P<valor>[\d\.]+,\d{2})\s+(?P<req>\d+)\s+(?P<conv>.+?)\s+\d+\s*$")
+
+
+def processar_relatorio_repasses(caminho):
+    """Le o Relatorio de Repasses Medicos (sistema da Medicina Nuclear/IDS):
+    pagamento por paciente com exame nominal, valor, requisicao e convenio."""
+    txt = texto_pdf(caminho)
+    if not re.search(r"Relat.rio de Repasses M.dicos", txt):
+        return None
+    resumo = {"tipo": "IDS - Relatorio de Repasses",
+              "arquivo": os.path.basename(caminho), "itens": [], "total": None}
+    m = re.search(r"Per.odo de pesquisa entre\s*:\s*"
+                  r"(\d{2}/\d{2}/\d{4}) e (\d{2}/\d{2}/\d{4})", txt)
+    if m:
+        resumo["periodo"] = f"{m.group(1)} a {m.group(2)}"
+    m = re.search(r"Impresso em\s*:\s*(\d{1,2} \w{3} \d{4})", txt)
+    if m:
+        resumo["emitido_em"] = m.group(1)
+    for linha in txt.splitlines():
+        m = LINHA_RELATORIO_RE.match(linha.strip())
+        if not m:
+            continue
+        resumo["itens"].append({
+            "data": _data_iso(m.group("data")),
+            "paciente": m.group("pac").strip(),
+            "procedimento": m.group("proc"),
+            "valor": dinheiro(m.group("valor")),
+            "requisicao": m.group("req"),
+            "convenio": m.group("conv").strip(),
+        })
+    m = re.search(r"Total procedimentos\s*R\$\s*([\d\.,]+)\s*(\d+)\s*Quantidade",
+                  txt)
+    if m:
+        resumo["total"] = {"qtd": int(m.group(2)), "valor": dinheiro(m.group(1))}
+    return resumo
+
+
 # ---------------------------------------------------------------- CardioPro
 def processar_cardiopro(caminho):
     wb = openpyxl.load_workbook(caminho, data_only=True)
@@ -280,6 +330,7 @@ def _fmt_valor(v):
 NOMES_AMIGAVEIS = {
     "IDS - Listagem de Repasse": "IDS · Repasse por unidade",
     "IDS - Listagem de Exames/Laudos": "IDS · Exames e laudos",
+    "IDS - Relatorio de Repasses": "IDS · Relatório de repasses",
     "Unimed - Demonstrativo": "Unimed · Demonstrativo",
     "CardioPro - Planilha de repasse": "CardioPro · Planilha",
 }
@@ -297,6 +348,11 @@ def _macro(r):
         if r.get("periodo"):
             partes.append(f"período {r['periodo']}")
         return " · ".join(partes)
+    if tipo == "IDS - Relatorio de Repasses":
+        if r.get("total"):
+            return (f"{r['total']['qtd']} procedimentos · "
+                    f"R$ {_fmt_valor(r['total']['valor'])}")
+        return f"{len(r['itens'])} procedimento(s)"
     if tipo.startswith("Unimed"):
         partes = []
         if r.get("liquido"):
@@ -318,7 +374,7 @@ def _tentar_parsers(caminho):
     try:
         if ext == ".pdf":
             r = None
-            for parser in (processar_ids, processar_unimed, processar_listagem_exames):
+            for parser in (processar_ids, processar_unimed, processar_listagem_exames, processar_relatorio_repasses):
                 r = parser(caminho)
                 if r:
                     break
@@ -399,6 +455,22 @@ def financeiro(pastas=None):
                 "executantes": r["executantes"],
                 "bruto": r.get("bruto"),
                 "liquido": r.get("liquido"),
+            })
+        elif r["tipo"] == "IDS - Relatorio de Repasses":
+            emp = empresas.setdefault("IDS", {"documentos": []})
+            por_proc = {}
+            for it in r["itens"]:
+                p = por_proc.setdefault(it["procedimento"], {"qtd": 0, "valor": 0})
+                p["qtd"] += 1
+                p["valor"] += it["valor"]
+            emp["documentos"].append({
+                "arquivo": r["arquivo"],
+                "emitido_em": None,
+                "periodo": r.get("periodo"),
+                "linhas": [{"tipo": proc.title(), "qtd": p["qtd"],
+                            "valor": p["valor"]}
+                           for proc, p in por_proc.items()],
+                "total": r.get("total"),
             })
         else:
             emp = empresas.setdefault("CardioPro", {"documentos": []})

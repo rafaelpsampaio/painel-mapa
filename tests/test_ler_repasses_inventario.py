@@ -41,10 +41,11 @@ def test_macro_cardiopro():
     assert lr._macro(r) == "2 mes(es) · 251 ECG · 125 MAPA"
 
 
-def test_nomes_amigaveis_cobre_os_4_tipos_conhecidos():
+def test_nomes_amigaveis_cobre_os_5_tipos_conhecidos():
     assert lr.NOMES_AMIGAVEIS == {
         "IDS - Listagem de Repasse": "IDS · Repasse por unidade",
         "IDS - Listagem de Exames/Laudos": "IDS · Exames e laudos",
+        "IDS - Relatorio de Repasses": "IDS · Relatório de repasses",
         "Unimed - Demonstrativo": "Unimed · Demonstrativo",
         "CardioPro - Planilha de repasse": "CardioPro · Planilha",
     }
@@ -81,6 +82,7 @@ def test_coletar_amostras_preserva_comportamento():
         ("IDS - Listagem de Repasse", "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"),
         ("IDS - Listagem de Repasse", "DR. FERNANDO SAMPAIO.pdf"),
         ("IDS - Listagem de Repasse", "MAPA - DR. FERNANDO SAMPAIO.pdf"),
+        ("IDS - Relatorio de Repasses", "RELATORIO REPASSES - MIBI PCT.pdf"),
         ("Unimed - Demonstrativo", "ExibeDemonstrativoPdf.pdf"),
         ("CardioPro - Planilha de repasse", "Repasse Dr. Fernando 2026.xlsx"),
         ("CardioPro - Planilha de repasse", "Repasse Dr. Fernando.xlsx"),
@@ -184,7 +186,7 @@ def test_importacoes_combina_local_e_email(tmp_path, monkeypatch):
     assert len(resultado["local"]["arquivos"]) == 1
     assert resultado["local"]["arquivos"][0]["status"] == "ok"
     assert resultado["email"]["pasta"] == AMOSTRAS
-    assert len(resultado["email"]["arquivos"]) == 7
+    assert len(resultado["email"]["arquivos"]) == 9
 
 
 def test_importacoes_sem_pasta_local_configurada(monkeypatch):
@@ -251,3 +253,35 @@ def test_coletar_mantem_arquivos_de_mesmo_nome_e_conteudo_diferente(tmp_path):
                 pasta_b / "demonstrativo.pdf")
     docs = lr.coletar(pastas=(str(pasta_a), str(pasta_b)))
     assert len(docs) == 2
+
+
+def test_processar_relatorio_repasses():
+    caminho = os.path.join(AMOSTRAS, "RELATORIO REPASSES - MIBI PCT.pdf")
+    r = lr.processar_relatorio_repasses(caminho)
+    assert r["tipo"] == "IDS - Relatorio de Repasses"
+    assert r["periodo"] == "01/01/2025 a 31/05/2025"
+    assert r["total"] == {"qtd": 17, "valor": 1680.11}
+    assert len(r["itens"]) == 17
+    assert r["itens"][0] == {
+        "data": "2025-01-07", "paciente": "ODAIL JOSE DENDEVITE",
+        "procedimento": "TESTE ERGOMETRICO MIBI", "valor": 98.83,
+        "requisicao": "5282691", "convenio": "UNIMED"}
+
+
+def test_processar_relatorio_repasses_ignora_outros_formatos():
+    caminho = os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf")
+    assert lr.processar_relatorio_repasses(caminho) is None
+
+
+def test_relatorio_repasses_entra_na_cadeia_de_parsers():
+    caminho = os.path.join(AMOSTRAS, "RELATORIO REPASSES - MIBI PCT.pdf")
+    item = lr._inspecionar_arquivo(caminho)
+    assert item["status"] == "ok"
+    assert item["tipo_amigavel"] == "IDS · Relatório de repasses"
+    assert item["resumo"] == "17 procedimentos · R$ 1.680,11"
+
+
+def test_relatorio_sem_texto_continua_nao_identificado():
+    caminho = os.path.join(AMOSTRAS, "RELATORIO SEM TEXTO.pdf")
+    item = lr._inspecionar_arquivo(caminho)
+    assert item["status"] == "nao_identificado"
