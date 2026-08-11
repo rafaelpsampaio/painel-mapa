@@ -253,7 +253,10 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       <option value="180">180 dias (mais lento)</option>
     </select>
   </label>
-  <button id="btn-atualizar" onclick="carregar()">&#8635; Atualizar</button>
+  <button id="btn-atualizar" onclick="carregar()"
+    title="Varre a caixa de email (mais lento)">&#8635; Atualizar email</button>
+  <button id="btn-atualizar-docs" onclick="atualizarDocumentos()"
+    title="Relê só as pastas de documentos (rápido)">&#8635; Documentos</button>
   <button id="btn-sair" onclick="encerrar()" title="Fecha o painel por completo">
     Encerrar</button>
   <div class="sub" id="subtitulo">&nbsp;</div>
@@ -450,7 +453,9 @@ function mostraAba(nome) {
 
 async function carregar() {
   const btn = document.getElementById("btn-atualizar");
+  const btnDocs = document.getElementById("btn-atualizar-docs");
   btn.disabled = true;
+  btnDocs.disabled = true;
   mostrar("carregando");
   try {
     const dias = document.getElementById("dias").value;
@@ -460,6 +465,7 @@ async function carregar() {
     if (d.erro) throw new Error(d.erro);
     dados = d;
     render();
+    carregarRecebimentos();
     carregarImportacoes();
     mostrar("conteudo");
   } catch (e) {
@@ -472,6 +478,7 @@ async function carregar() {
     mostrar("tela-erro");
   } finally {
     btn.disabled = false;
+    btnDocs.disabled = false;
   }
 }
 
@@ -976,6 +983,19 @@ function renderSecaoImportacoes(idSecao, secao) {
     ordemStatusImportacao(a.status) - ordemStatusImportacao(b.status) ||
     a.arquivo.localeCompare(b.arquivo));
   listaEl.innerHTML = ordenados.map(cardImportacao).join("");
+}
+
+async function carregarRecebimentos() {
+}
+
+async function atualizarDocumentos() {
+  const btn = document.getElementById("btn-atualizar-docs");
+  btn.disabled = true;
+  try {
+    await Promise.all([carregarRecebimentos(), carregarImportacoes()]);
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function carregarImportacoes() {
