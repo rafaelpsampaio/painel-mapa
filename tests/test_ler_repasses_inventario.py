@@ -223,3 +223,31 @@ def test_inspecionar_arquivo_erro_na_classificacao_nao_derruba(monkeypatch):
     item = lr._inspecionar_arquivo(caminho)
     assert item["status"] == "erro"
     assert item["motivo"]
+
+
+def test_coletar_nao_conta_2x_mesmo_conteudo_com_nomes_diferentes(tmp_path):
+    """O mesmo demonstrativo pode chegar por email 2x (reenvio), baixado com
+    nomes diferentes (prefixo de data). Sem isso, o total da aba Financeiro
+    duplica: mesmo exame/valor contado 2x."""
+    origem = os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf")
+    shutil.copy(origem, tmp_path / "2026-06-24_DEMAIS EXAMES.pdf")
+    shutil.copy(origem, tmp_path / "2026-07-08_DEMAIS EXAMES.pdf")
+    docs = lr.coletar(pastas=(str(tmp_path),))
+    assert len(docs) == 1
+    assert docs[0]["total"] == {"qtd": 239, "valor": 11282.34}
+
+
+def test_coletar_mantem_arquivos_de_mesmo_nome_e_conteudo_diferente(tmp_path):
+    """Caso oposto: nomes iguais (ex.: 'MAPA.pdf' na pasta local e na pasta do
+    email), conteudo diferente. Hoje o dedup por nome descartaria o segundo
+    silenciosamente; deve manter os dois."""
+    pasta_a = tmp_path / "a"
+    pasta_b = tmp_path / "b"
+    pasta_a.mkdir()
+    pasta_b.mkdir()
+    shutil.copy(os.path.join(AMOSTRAS, "DEMAIS EXAMES - FERNANDO SAMPAIO.pdf"),
+                pasta_a / "demonstrativo.pdf")
+    shutil.copy(os.path.join(AMOSTRAS, "MAPA - DR. FERNANDO SAMPAIO.pdf"),
+                pasta_b / "demonstrativo.pdf")
+    docs = lr.coletar(pastas=(str(pasta_a), str(pasta_b)))
+    assert len(docs) == 2

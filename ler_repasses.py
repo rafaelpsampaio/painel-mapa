@@ -342,23 +342,32 @@ def pastas_padrao():
     return base
 
 
+def _assinatura_conteudo(r):
+    """Chave de dedup baseada no que o parser leu, nao no nome do arquivo.
+    O mesmo demonstrativo pode chegar 2x por email (reenvio) com nomes
+    diferentes (prefixo de data); sem isso o total da aba Financeiro conta
+    o mesmo exame/valor 2x."""
+    corpo = {k: v for k, v in r.items() if k != "arquivo"}
+    return json.dumps(corpo, sort_keys=True, default=str)
+
+
 def coletar(pastas=None):
-    """Processa todos os demonstrativos das pastas (dedup por nome)."""
+    """Processa todos os demonstrativos das pastas (dedup por conteudo)."""
     if pastas is None:
         pastas = pastas_padrao()
     docs = []
     vistos = set()
     for pasta in pastas:
         for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*"))):
-            nome = os.path.basename(caminho).lower()
-            if nome in vistos:
-                continue
             r, erro = _tentar_parsers(caminho)
             if erro:
                 print(f"ERRO ao processar {caminho}: {erro}")
                 continue
             if r:
-                vistos.add(nome)
+                chave = _assinatura_conteudo(r)
+                if chave in vistos:
+                    continue
+                vistos.add(chave)
                 docs.append(r)
     return docs
 
