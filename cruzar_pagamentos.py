@@ -22,6 +22,7 @@ import rotina_pendencias as rp
 from ler_repasses import (texto_pdf, dinheiro, SETOR_EXAME_LISTAGEM,
                            _regex_tolerante, processar_listagem_exames,
                            pastas_padrao)
+from eventos import separar_convenio
 
 PASTA = "amostras"
 
@@ -39,40 +40,6 @@ COMPAT = {  # pagador -> fontes de exame que ele pode pagar
 ORDEM_PAGADOR = {"IDS": 0, "Unimed": 1, "CardioPro": 2}
 # janela de cobertura usada no alerta "sem registro", por fonte do exame
 PAGADOR_PRIMARIO = {"IDS": "IDS", "Unimed": "Unimed", "CardioPro": "Unimed"}
-
-# convenios conhecidos nos pagamentos por paciente da IDS (descobertos
-# minerando os sufixos que mais se repetem no campo "nome" -- ver memoria);
-# o nome do paciente e o convenio vem grudados no mesmo campo, sem separador.
-CONVENIO_DISPLAY = {
-    "INTERMEDICA SAUDE S.A": "Intermédica",
-    "INTERMEDICA- MEDIPLAN": "Intermédica",
-    "CARTAO IDS MATRIZ": "Cartão IDS",
-    "HAPVIDA - SOROCABA": "Hapvida",
-    "BRADESCO OPERADORA PLANOS S/A": "Bradesco Operadora",
-    "BRADESCO SAUDE": "Bradesco Saúde",
-    "CAIXA ECONOMICA FEDERAL": "Caixa Econômica Federal",
-    "SUL AMERICA": "Sul América",
-    "PORTO SEGURO": "Porto Seguro",
-    "CEPOS- EMPRESA": "Cepos",
-    "UNIMED": "Unimed",
-    "AMIL": "Amil",
-    "APAS": "Apas",
-    "CASSI": "Cassi",
-    "CABESP": "Cabesp",
-    "MARINHA": "Marinha",
-}
-_PADROES_CONVENIO = sorted(CONVENIO_DISPLAY, key=len, reverse=True)
-_PADROES_CONVENIO = [(c, re.compile(_regex_tolerante(c) + r"$")) for c in _PADROES_CONVENIO]
-
-
-def extrair_convenio(nome):
-    """Convenio (nome de exibicao) no fim do campo 'nome' de um item de
-    pagamento da IDS, ou None se nao reconhecido."""
-    for canonico, padrao in _PADROES_CONVENIO:
-        if padrao.search(nome):
-            return CONVENIO_DISPLAY[canonico]
-    return None
-
 
 def data_de(v):
     if hasattr(v, "year"):
@@ -141,7 +108,7 @@ def itens_ids_setores(caminho):
             "data": data_de(m.group(1)), "nome": nome,
             "valor": dinheiro(re.sub(r"\s+", "", m.group(3))),
             "origem": os.path.basename(caminho),
-            "convenio": extrair_convenio(nome),
+            "convenio": separar_convenio(nome)[1],
         })
     return itens
 
