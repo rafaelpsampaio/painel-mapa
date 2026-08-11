@@ -105,12 +105,9 @@ class Handler(BaseHTTPRequestHandler):
                 salvar_historico(dados)
                 self._json(dados)
 
-            elif rota.path == "/api/financeiro":
-                self._json(ler_repasses.financeiro())
-
-            elif rota.path == "/api/realizados_fornecedor":
-                import cruzar_pagamentos
-                self._json(cruzar_pagamentos.agregar_por_mes_fornecedor())
+            elif rota.path == "/api/recebimentos":
+                import eventos
+                self._json(eventos.recebimentos())
 
             elif rota.path == "/api/importacoes":
                 self._json(ler_repasses.importacoes())
