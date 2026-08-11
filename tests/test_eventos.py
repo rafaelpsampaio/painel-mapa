@@ -120,3 +120,63 @@ def test_supressao_cruzada_mantem_pacientes_diferentes():
          "tipo": "faturado", "documento": "planilha.xlsx"},
     ])
     assert len(evs) == 2
+
+
+def _ev(**kw):
+    base = {"pagador": "IDS", "exame": "MAPA", "paciente": "Maria Souza",
+            "data": "2026-03-10", "valor": 45.0, "convenio": None,
+            "tipo": "pago", "documento": "doc.pdf"}
+    base.update(kw)
+    return base
+
+
+def test_agregacoes(monkeypatch):
+    evs = [
+        _ev(),
+        _ev(paciente="Jose Lima", exame="Consulta", pagador="Unimed",
+            valor=122.0, data="2026-03-20"),
+        _ev(paciente="Ana Reis", exame="Teste Ergométrico", valor=105.5,
+            data="2026-04-02"),
+        _ev(paciente="Rui Costa", pagador="CardioPro", tipo="faturado",
+            valor=None, data="2026-04-05"),
+    ]
+    monkeypatch.setattr(ev, "coletar_eventos", lambda pastas=None: evs)
+    monkeypatch.setattr(ev, "_exames_realizados", lambda pastas=None: [])
+    import ler_repasses as lr
+    monkeypatch.setattr(lr, "financeiro", lambda pastas=None: {"empresas": {}})
+    r = ev.recebimentos()
+    assert r["totais"] == {
+        "valor": 272.5, "exames": 3, "consultas": 1,
+        "por_pagador": {"IDS": {"qtd": 2, "valor": 150.5},
+                        "Unimed": {"qtd": 1, "valor": 122.0},
+                        "CardioPro": {"qtd": 1, "valor": 0}}}
+    assert [m["mes"] for m in r["por_mes"]] == ["2026-03", "2026-04"]
+    assert r["por_mes"][0]["por_pagador"]["IDS"] == {"qtd": 1, "valor": 45.0}
+    assert r["por_exame"][0]["exame"] == "MAPA"  # maior qtd primeiro... empate: ordem por qtd desc, valor desc
+    assert r["eventos"] == evs
+
+
+def test_sem_pagamento_forte_e_fraca(monkeypatch):
+    evs = [_ev(paciente="Maria Souza", exame="Teste Ergométrico",
+               data="2026-03-10")]
+    realizados = [
+        {"paciente": "Maria Souza", "setor": "TESTE ERGOMETRICO",
+         "data": "2026-03-10", "assinado": "Sim"},   # pago: fora da lista
+        {"paciente": "Pedro Alves", "setor": "TESTE ERGOMETRICO",
+         "data": "2026-03-12", "assinado": "Sim"},   # coberto e nao pago: forte
+        {"paciente": "Rita Nunes", "setor": "TESTE ERGOMETRICO",
+         "data": "2026-07-01", "assinado": "Sim"},   # fora da cobertura: fraca
+        {"paciente": "Caio Dias", "setor": "TESTE ERGOMETRICO",
+         "data": "2026-03-15", "assinado": "Não"},   # sem laudo: fora da lista
+    ]
+    monkeypatch.setattr(ev, "coletar_eventos", lambda pastas=None: evs)
+    monkeypatch.setattr(ev, "_exames_realizados",
+                        lambda pastas=None: realizados)
+    import ler_repasses as lr
+    monkeypatch.setattr(lr, "financeiro", lambda pastas=None: {"empresas": {}})
+    r = ev.recebimentos()
+    casos = {c["paciente"]: c for c in r["sem_pagamento"]}
+    assert set(casos) == {"Pedro Alves", "Rita Nunes"}
+    assert casos["Pedro Alves"]["forca"] == "forte"
+    assert casos["Rita Nunes"]["forca"] == "fraca"
+    assert r["sem_pagamento"][0]["paciente"] == "Pedro Alves"  # forte primeiro

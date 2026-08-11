@@ -335,3 +335,123 @@ def coletar_eventos(pastas=None):
         vistos.add(chave)
         unicos.append(evd)
     return _suprimir_cruzados(unicos)
+
+
+# ------------------------------------------------- painel de recebimentos
+def _exames_realizados(pastas=None):
+    """Exames da Listagem de Exames/Laudos da IDS (dedup por requisicao):
+    a evidencia de 'foi feito' pros exames que nao passam pelo email."""
+    import ler_repasses as lr
+    if pastas is None:
+        pastas = lr.pastas_padrao()
+    exames = []
+    vistos_req = set()
+    for pasta in pastas:
+        for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*"))):
+            if not caminho.lower().endswith(".pdf"):
+                continue
+            try:
+                r = lr.processar_listagem_exames(caminho)
+            except Exception:
+                continue
+            for e in (r or {}).get("exames", []):
+                if e["requisicao"] in vistos_req:
+                    continue
+                vistos_req.add(e["requisicao"])
+                exames.append({"paciente": e["paciente"],
+                               "setor": e["setor"], "data": e["data"],
+                               "assinado": e["assinado"]})
+    return exames
+
+
+def recebimentos(pastas=None):
+    """Estrutura completa pro GET /api/recebimentos."""
+    from datetime import datetime as _dt
+    import ler_repasses as lr
+    evs = coletar_eventos(pastas)
+
+    por_pagador = {}
+    por_exame = {}
+    por_mes = {}
+    total_valor = 0.0
+    exames_qtd = consultas_qtd = 0
+    for evd in evs:
+        v = evd["valor"] or 0
+        total_valor += v
+        if evd["exame"] == "Consulta":
+            consultas_qtd += 1
+        else:
+            exames_qtd += 1
+        p = por_pagador.setdefault(evd["pagador"], {"qtd": 0, "valor": 0})
+        p["qtd"] += 1
+        p["valor"] += v
+        x = por_exame.setdefault(evd["exame"], {"qtd": 0, "valor": 0})
+        x["qtd"] += 1
+        x["valor"] += v
+        if evd["data"]:
+            m = por_mes.setdefault(evd["data"][:7],
+                                   {"mes": evd["data"][:7],
+                                    "por_pagador": {}, "por_exame": {}})
+            mp = m["por_pagador"].setdefault(evd["pagador"],
+                                             {"qtd": 0, "valor": 0})
+            mp["qtd"] += 1
+            mp["valor"] += v
+            mx = m["por_exame"].setdefault(evd["exame"], {"qtd": 0, "valor": 0})
+            mx["qtd"] += 1
+            mx["valor"] += v
+
+    # cobertura por exame: janela de datas de exame ja paga
+    cobertura = {}
+    for evd in evs:
+        if not evd["data"]:
+            continue
+        c = cobertura.setdefault(evd["exame"], [evd["data"], evd["data"]])
+        c[0] = min(c[0], evd["data"])
+        c[1] = max(c[1], evd["data"])
+
+    # sem pagamento: realizado laudado sem evento casado
+    indice = {}
+    for evd in evs:
+        tokens = rp.normalizar(evd["paciente"]).split()
+        if tokens and evd["data"]:
+            indice.setdefault((evd["exame"], tokens[0]), []).append(evd)
+    sem_pagamento = []
+    for ex in _exames_realizados(pastas):
+        if ex["assinado"] != "Sim":
+            continue
+        exame = exame_canonico(ex["setor"])
+        tokens = rp.normalizar(ex["paciente"]).split()
+        dt = _dt.strptime(ex["data"], "%Y-%m-%d")
+        achou = False
+        for evd in (indice.get((exame, tokens[0]), []) if tokens else []):
+            delta = abs((_dt.strptime(evd["data"], "%Y-%m-%d") - dt).days)
+            if delta <= 10 and casa_nome(ex["paciente"], evd["paciente"]):
+                achou = True
+                break
+        if achou:
+            continue
+        c = cobertura.get(exame)
+        # janela de cobertura por mes (nao por dia exato): um pagamento
+        # registrado no mes cobre qualquer exame realizado no mesmo mes
+        forca = ("forte" if c and c[0][:7] <= ex["data"][:7] <= c[1][:7]
+                 else "fraca")
+        sem_pagamento.append({"paciente": ex["paciente"], "exame": exame,
+                              "data": ex["data"],
+                              "fonte": "Listagem de Exames/Laudos (IDS)",
+                              "forca": forca})
+    sem_pagamento.sort(key=lambda c: (c["forca"] != "forte", c["data"]))
+
+    lista_exames = sorted(
+        ({"exame": nome, **tot} for nome, tot in por_exame.items()),
+        key=lambda x: (-x["qtd"], -x["valor"]))
+    return {
+        "totais": {"valor": total_valor, "exames": exames_qtd,
+                   "consultas": consultas_qtd, "por_pagador": por_pagador},
+        "por_mes": sorted(por_mes.values(), key=lambda m: m["mes"]),
+        "por_exame": lista_exames,
+        "eventos": evs,
+        "sem_pagamento": sem_pagamento,
+        "cobertura": {k: {"inicio": v[0], "fim": v[1]}
+                      for k, v in cobertura.items()},
+        "documentos": lr.financeiro(pastas)["empresas"],
+    }
