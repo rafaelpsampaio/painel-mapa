@@ -63,6 +63,7 @@
     color: var(--cor-texto); }
   .card .rot { font-size: 11.5px; color: var(--cor-texto-fraco); margin-top: 3px;
     text-transform: uppercase; letter-spacing: .03em; font-weight: 600; }
+  .card .sub { font-size: 11.5px; color: var(--cor-texto-fraco); margin-top: 3px; }
   .card.vermelho .num { color: var(--cor-erro); }
   .card.verde .num { color: var(--cor-ok); }
   .card.ambar .num { color: var(--cor-alerta); }
@@ -75,6 +76,7 @@
   table { width: 100%; border-collapse: collapse; }
   th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--cor-borda);
            font-size: 13.5px; }
+  td.num, th.num { text-align: right; }
   th { color: var(--cor-texto-fraco); font-size: 11px; text-transform: uppercase;
        letter-spacing: .03em; font-weight: 700; position: sticky; top: 0;
        background: var(--cor-superficie); z-index: 2;
@@ -334,8 +336,41 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   </div>
 
   <div id="aba-financeiro" class="oculto">
-    <div id="sec-financeiro"><p class="nota">Carregando&hellip;</p></div>
-
+    <section class="bloco">
+      <h2>Recebimentos</h2>
+      <p class="nota">Somados dos demonstrativos de pagamento (IDS e Unimed
+        têm valor; a planilha da CardioPro comprova o repasse mas não informa
+        valor). Clique em qualquer número para ver os pacientes.</p>
+      <div class="cards" id="cards-recebimentos"></div>
+    </section>
+    <section class="bloco" id="sec-grafico-meses">
+      <div class="segmentado">
+        <button class="ativa" id="btn-mes-pagador" onclick="renderMeses('pagador')">Por pagador</button>
+        <button id="btn-mes-exame" onclick="renderMeses('exame')">Por exame</button>
+      </div>
+      <h2>Recebido por mês</h2>
+      <p class="nota">Pelo mês em que o exame foi feito (competência), não
+        pelo dia em que o dinheiro caiu.</p>
+      <div id="grafico-meses"></div>
+      <div class="legenda" id="legenda-meses"></div>
+    </section>
+    <section class="bloco">
+      <h2>Por exame</h2>
+      <div id="tabela-por-exame"></div>
+    </section>
+    <section class="bloco" id="sec-sem-pagamento"></section>
+    <section class="bloco oculto" id="bloco-eventos">
+      <div class="transacoes-cabeca">
+        <h2 id="eventos-titulo"></h2>
+        <button onclick="document.getElementById('bloco-eventos').classList.add('oculto')">Fechar</button>
+      </div>
+      <div class="filtros">
+        <input type="text" id="eventos-busca" placeholder="Buscar paciente&hellip;"
+          oninput="renderEventosFiltrados()">
+      </div>
+      <div id="eventos-corpo"></div>
+    </section>
+    <div id="sec-documentos-fin"></div>
     <div id="sec-orfaos"></div>
   </div>
 
@@ -814,7 +849,7 @@ async function salvarPasta() {
     ? "salvo: lendo " + resp.arquivos + " arquivo(s). Clique em " +
       "Atualizar para recruzar os dados."
     : "pasta desativada";
-  carregarFinanceiro();
+  carregarRecebimentos();
   carregarRealizadosFornecedor();
   carregarImportacoes();
 }
@@ -894,55 +929,6 @@ function chaveDataFin(doc) {
   return doc.periodo || "";
 }
 
-async function carregarFinanceiro() {
-  const sec = document.getElementById("sec-financeiro");
-  try {
-    const f = await (await fetch("/api/financeiro")).json();
-    const nomes = ["IDS", "Unimed", "CardioPro"].filter(n => f.empresas[n]);
-    if (!nomes.length) {
-      sec.innerHTML = "<p class='nota'>Nenhum demonstrativo na pasta " +
-        "repasses ainda.</p>";
-      return;
-    }
-    let resumos = "<div class='grade-fornecedores-fin'>";
-    let listas = "";
-    for (const nome of nomes) {
-      const emp = f.empresas[nome];
-      const docsOrdenados = emp.documentos.slice()
-        .sort((a, b) => chaveDataFin(b).localeCompare(chaveDataFin(a)));
-      let totalQtd = 0, totalValor = 0, temValor = false;
-      docsOrdenados.forEach(doc => {
-        const r = resumoDocumentoFin(doc);
-        totalQtd += r.qtd;
-        if (r.valor != null) { totalValor += r.valor; temValor = true; }
-      });
-      resumos += "<div class='resumo-fornecedor-fin'><h3>" + esc(nome) + "</h3>" +
-        "<div class='num-grande'>" + totalQtd + " exames</div>" +
-        "<div class='num-sub'>" + docsOrdenados.length + " documento" +
-        (docsOrdenados.length === 1 ? "" : "s") +
-        (temValor ? " · " + brl(totalValor) : "") + "</div></div>";
-      listas += "<section class='bloco'><h2>" + esc(nome) + "</h2>" +
-        "<div class='doc-fin-lista'>" +
-        docsOrdenados.map(doc => {
-          const r = resumoDocumentoFin(doc);
-          return "<details><summary>" +
-            "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
-            "<span class='doc-tipo'>" + esc(TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
-            "<span class='doc-num'>" + r.qtd + " exames" +
-            (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
-            "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
-            detalheDocumentoFin(doc) + "</div></details>";
-        }).join("") + "</div></section>";
-    }
-    resumos += "</div>";
-    sec.innerHTML = "<section class='bloco'><h2>Produção e pagamentos " +
-      "(demonstrativos recebidos)</h2>" + resumos + "</section>" + listas;
-  } catch (e) {
-    sec.innerHTML = "<p class='nota'>Não consegui ler os demonstrativos.</p>";
-  }
-}
-carregarFinanceiro();
-
 function ordemStatusImportacao(status) {
   return status === "erro" ? 0 : status === "nao_identificado" ? 1 : 2;
 }
@@ -985,8 +971,135 @@ function renderSecaoImportacoes(idSecao, secao) {
   listaEl.innerHTML = ordenados.map(cardImportacao).join("");
 }
 
+let rec = null;            // JSON de /api/recebimentos
+let eventosVisiveis = [];  // eventos do drill-down aberto
+let vistaMes = "pagador";
+
 async function carregarRecebimentos() {
+  try {
+    rec = await (await fetch("/api/recebimentos")).json();
+  } catch (e) {
+    document.getElementById("cards-recebimentos").innerHTML =
+      "<p class='nota'>Não consegui ler os demonstrativos.</p>";
+    return;
+  }
+  renderCardsRecebimentos();
+  renderMeses(vistaMes);
+  renderPorExame();
+  renderSemPagamento();       // Task 11 (stub até lá)
+  renderDocumentosFin();
 }
+
+function renderMeses(vista) {
+  vistaMes = vista || vistaMes;
+  // gráfico em si vem da Task 10
+}
+
+function renderSemPagamento() {
+  // Task 11
+}
+
+function cardRec(rotulo, valor, sub, onclick) {
+  return "<div class='card' " + (onclick ? "style='cursor:pointer' onclick=\"" +
+    onclick + "\"" : "") + "><div class='num'>" + valor + "</div>" +
+    "<div class='rot'>" + esc(rotulo) + "</div>" +
+    (sub ? "<div class='sub'>" + esc(sub) + "</div>" : "") + "</div>";
+}
+
+function renderCardsRecebimentos() {
+  const t = rec.totais;
+  let h = cardRec("Total recebido", brl(t.valor), null,
+                  "mostrarEventos('Todos os eventos', function(e){return true})");
+  h += cardRec("Exames pagos", t.exames, null,
+               "mostrarEventos('Exames pagos', function(e){return e.exame !== 'Consulta'})");
+  h += cardRec("Consultas", t.consultas, null,
+               "mostrarEventos('Consultas', function(e){return e.exame === 'Consulta'})");
+  for (const nome of ["IDS", "Unimed", "CardioPro"]) {
+    const p = t.por_pagador[nome];
+    if (!p) continue;
+    h += cardRec(nome, p.qtd,
+                 p.valor ? brl(p.valor) : "sem valor informado",
+                 "mostrarEventos('" + nome + "', function(e){return e.pagador === '" +
+                 nome + "'})");
+  }
+  document.getElementById("cards-recebimentos").innerHTML = h;
+}
+
+function mostrarEventosPorExame(i) {
+  const exame = rec.por_exame[i].exame;
+  mostrarEventos(exame, function(e) { return e.exame === exame; });
+}
+
+function renderPorExame() {
+  const linhas = rec.por_exame.map((x, i) =>
+    "<tr style='cursor:pointer' onclick=\"mostrarEventosPorExame(" + i + ")\">" +
+    "<td>" + esc(x.exame) + "</td><td class='num'>" + x.qtd + "</td>" +
+    "<td class='num'>" + (x.valor ? brl(x.valor) : "sem valor informado") +
+    "</td><td class='num'>" +
+    (x.valor && x.qtd ? brl(x.valor / x.qtd) : "") + "</td></tr>").join("");
+  document.getElementById("tabela-por-exame").innerHTML =
+    "<table><thead><tr><th>Exame</th><th class='num'>Qtd</th>" +
+    "<th class='num'>Valor</th><th class='num'>Médio</th></tr></thead>" +
+    "<tbody>" + linhas + "</tbody></table>";
+}
+
+function mostrarEventos(titulo, filtroFn) {
+  eventosVisiveis = (rec.eventos || []).filter(filtroFn);
+  document.getElementById("eventos-titulo").textContent =
+    titulo + " (" + eventosVisiveis.length + ")";
+  document.getElementById("eventos-busca").value = "";
+  renderEventosFiltrados();
+  const bloco = document.getElementById("bloco-eventos");
+  bloco.classList.remove("oculto");
+  bloco.scrollIntoView({behavior: "smooth"});
+}
+
+function renderEventosFiltrados() {
+  const busca = normJs(document.getElementById("eventos-busca").value.trim());
+  const lista = eventosVisiveis.filter(e =>
+    !busca || normJs(e.paciente).includes(busca));
+  const linhas = lista.slice(0, 500).map(e =>
+    "<tr><td>" + esc(e.paciente) + "</td><td>" + esc(e.exame) + "</td>" +
+    "<td>" + esc(dataBr(e.data)) + "</td><td>" + esc(e.pagador) +
+    (e.convenio ? " · " + esc(e.convenio) : "") + "</td>" +
+    "<td class='num'>" + (e.valor != null ? brl(e.valor)
+      : (e.tipo === "faturado" ? "faturado" : "sem valor")) + "</td>" +
+    "<td class='nota'>" + esc(e.documento) + "</td></tr>").join("");
+  document.getElementById("eventos-corpo").innerHTML =
+    "<table><thead><tr><th>Paciente</th><th>Exame</th><th>Data</th>" +
+    "<th>Pagador</th><th class='num'>Valor</th><th>Documento</th></tr>" +
+    "</thead><tbody>" + linhas + "</tbody></table>" +
+    (lista.length > 500 ? "<p class='nota'>Mostrando 500 de " + lista.length +
+     "; use a busca pra refinar.</p>" : "");
+}
+
+function renderDocumentosFin() {
+  // reaproveita o corpo da antiga carregarFinanceiro(): lista de documentos
+  // por empresa em <details>, agora lendo de rec.documentos
+  const sec = document.getElementById("sec-documentos-fin");
+  const nomes = ["IDS", "Unimed", "CardioPro"].filter(n => rec.documentos[n]);
+  if (!nomes.length) { sec.innerHTML = ""; return; }
+  let listas = "";
+  for (const nome of nomes) {
+    const docsOrdenados = rec.documentos[nome].documentos.slice()
+      .sort((a, b) => chaveDataFin(b).localeCompare(chaveDataFin(a)));
+    listas += "<section class='bloco'><details><summary><h2 style='display:inline'>" +
+      "Documentos · " + esc(nome) + " (" + docsOrdenados.length +
+      ")</h2></summary><div class='doc-fin-lista'>" +
+      docsOrdenados.map(doc => {
+        const r = resumoDocumentoFin(doc);
+        return "<details><summary>" +
+          "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
+          "<span class='doc-tipo'>" + esc(TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
+          "<span class='doc-num'>" + r.qtd + " itens" +
+          (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
+          "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
+          detalheDocumentoFin(doc) + "</div></details>";
+      }).join("") + "</div></details></section>";
+  }
+  sec.innerHTML = listas;
+}
+carregarRecebimentos();
 
 async function atualizarDocumentos() {
   const btn = document.getElementById("btn-atualizar-docs");
