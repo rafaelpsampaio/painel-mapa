@@ -8,6 +8,7 @@ de "sem pagamento" trabalham so em cima dessa lista.
 """
 
 import difflib
+import glob
 import os
 import re
 from datetime import datetime, timedelta
@@ -253,3 +254,84 @@ def itens_relatorio(caminho):
              "convenio": separar_convenio(it["convenio"])[1] or it["convenio"].title(),
              "origem": r["arquivo"]}
             for it in r["itens"]]
+
+
+# -------------------------------------------------- eventos consolidados
+def _suprimir_cruzados(eventos):
+    """O mesmo exame pago/faturado em fontes de pagadores diferentes conta
+    uma vez, pela fonte de maior prioridade (IDS > Unimed > CardioPro).
+    Casamento aproximado (casa_nome, +-10 dias) porque as fontes grafam o
+    nome de formas diferentes."""
+    from datetime import datetime as _dt
+    ordenados = sorted(eventos,
+                       key=lambda e: PRIORIDADE_PAGADOR.get(e["pagador"], 9))
+    mantidos = []
+    indice = {}
+    for evd in ordenados:
+        tokens = rp.normalizar(evd["paciente"]).split()
+        chave = (evd["exame"], tokens[0]) if tokens else None
+        duplicado = False
+        if chave and evd["data"]:
+            dt = _dt.strptime(evd["data"], "%Y-%m-%d")
+            for outro in indice.get(chave, []):
+                if outro["pagador"] == evd["pagador"] or not outro["data"]:
+                    continue
+                delta = abs((_dt.strptime(outro["data"], "%Y-%m-%d") - dt).days)
+                if delta > 10:
+                    continue
+                if casa_nome(evd["paciente"], outro["paciente"]):
+                    duplicado = True
+                    break
+        if duplicado:
+            continue
+        mantidos.append(evd)
+        if chave:
+            indice.setdefault(chave, []).append(evd)
+    return mantidos
+
+
+def coletar_eventos(pastas=None):
+    """Lista unica de eventos de pagamento de todas as pastas, deduplicada."""
+    import ler_repasses as lr
+    if pastas is None:
+        pastas = lr.pastas_padrao()
+    brutos = []
+    for pasta in pastas:
+        for caminho in sorted(glob.glob(os.path.join(glob.escape(pasta), "*"))):
+            low = caminho.lower()
+            try:
+                if low.endswith(".pdf"):
+                    brutos += itens_relatorio(caminho)
+                    brutos += itens_ids(caminho)
+                    brutos += itens_ids_setores(caminho)
+                    brutos += itens_unimed(caminho)
+                elif low.endswith(".xlsx"):
+                    brutos += itens_cardiopro(caminho)
+            except Exception:
+                continue  # arquivo quebrado aparece na aba Importacoes
+    eventos = []
+    for p in brutos:
+        data = p.get("data")
+        if data is not None and not data_valida(data):
+            data = None
+        nome, conv = separar_convenio(p["nome"])
+        eventos.append({
+            "pagador": p["empresa"],
+            "exame": exame_canonico(p["mod"]),
+            "paciente": nome.title(),
+            "data": data.strftime("%Y-%m-%d") if data else None,
+            "valor": p.get("valor"),
+            "convenio": p.get("convenio") or conv,
+            "tipo": "faturado" if p["empresa"] == "CardioPro" else "pago",
+            "documento": p["origem"],
+        })
+    vistos = set()
+    unicos = []
+    for evd in eventos:
+        chave = (evd["pagador"], evd["exame"],
+                 rp.normalizar(evd["paciente"]), evd["data"])
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        unicos.append(evd)
+    return _suprimir_cruzados(unicos)

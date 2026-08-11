@@ -79,3 +79,44 @@ def test_itens_cardiopro_shape_completa():
     assert set(itens[0]) == {"empresa", "mod", "data", "nome", "valor",
                              "convenio", "origem"}
     assert itens[0]["valor"] is None
+
+
+def test_coletar_eventos_shape_e_dedup_exato(tmp_path):
+    import shutil
+    shutil.copy(os.path.join(AMOSTRAS, "RELATORIO REPASSES - MIBI PCT.pdf"),
+                tmp_path / "a.pdf")
+    shutil.copy(os.path.join(AMOSTRAS, "RELATORIO REPASSES - MIBI PCT.pdf"),
+                tmp_path / "b.pdf")  # reenvio: mesmo conteudo, outro nome
+    evs = ev.coletar_eventos(pastas=(str(tmp_path),))
+    assert len(evs) == 17  # nao 34
+    e0 = next(e for e in evs if e["paciente"] == "Odail Jose Dendevite")
+    documento = e0.pop("documento")
+    assert documento in ("a.pdf", "b.pdf")
+    assert e0 == {"pagador": "IDS", "exame": "Teste Ergométrico MIBI",
+                  "paciente": "Odail Jose Dendevite", "data": "2025-01-07",
+                  "valor": 98.83, "convenio": "Unimed", "tipo": "pago"}
+
+
+def test_supressao_cruzada_prioriza_pagador_de_maior_prioridade():
+    evs = ev._suprimir_cruzados([
+        {"pagador": "CardioPro", "exame": "MAPA", "paciente": "Maria Souza",
+         "data": "2026-03-10", "valor": None, "convenio": None,
+         "tipo": "faturado", "documento": "planilha.xlsx"},
+        {"pagador": "Unimed", "exame": "MAPA", "paciente": "MARIA SOUZA",
+         "data": "2026-03-12", "valor": 90.0, "convenio": None,
+         "tipo": "pago", "documento": "unimed.pdf"},
+    ])
+    assert len(evs) == 1
+    assert evs[0]["pagador"] == "Unimed"
+
+
+def test_supressao_cruzada_mantem_pacientes_diferentes():
+    evs = ev._suprimir_cruzados([
+        {"pagador": "Unimed", "exame": "MAPA", "paciente": "Maria Souza",
+         "data": "2026-03-12", "valor": 90.0, "convenio": None,
+         "tipo": "pago", "documento": "unimed.pdf"},
+        {"pagador": "CardioPro", "exame": "MAPA", "paciente": "Marta Silveira",
+         "data": "2026-03-12", "valor": None, "convenio": None,
+         "tipo": "faturado", "documento": "planilha.xlsx"},
+    ])
+    assert len(evs) == 2
