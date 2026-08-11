@@ -70,3 +70,12 @@ def test_itens_ids_setores_tem_convenio_separado():
     assert itens
     com_convenio = [i for i in itens if i["convenio"]]
     assert com_convenio, "esperava ao menos um item com convenio reconhecido"
+
+
+def test_itens_cardiopro_shape_completa():
+    itens = ev.itens_cardiopro(
+        os.path.join(AMOSTRAS, "Repasse Dr. Fernando 2026.xlsx"))
+    assert itens
+    assert set(itens[0]) == {"empresa", "mod", "data", "nome", "valor",
+                             "convenio", "origem"}
+    assert itens[0]["valor"] is None

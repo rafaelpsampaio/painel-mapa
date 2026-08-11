@@ -236,7 +236,8 @@ def itens_cardiopro(caminho):
                         data = d
                         break
                 itens.append({"empresa": "CardioPro", "mod": "MAPA",
-                              "data": data, "nome": nome, "convenio": None,
+                              "data": data, "nome": nome, "valor": None,
+                              "convenio": None,
                               "origem": f"{os.path.basename(caminho)} [{aba}]"})
     return itens
 
