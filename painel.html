@@ -1006,6 +1006,11 @@ function cardRec(rotulo, valor, sub, onclick) {
     (sub ? "<div class='sub'>" + esc(sub) + "</div>" : "") + "</div>";
 }
 
+// agregado 0 significa que nenhum evento trouxe valor (ex.: planilha CardioPro)
+function valorAgregado(v) {
+  return v > 0 ? brl(v) : "sem valor informado";
+}
+
 function renderCardsRecebimentos() {
   const t = rec.totais;
   let h = cardRec("Total recebido", brl(t.valor), null,
@@ -1017,8 +1022,7 @@ function renderCardsRecebimentos() {
   for (const nome of ["IDS", "Unimed", "CardioPro"]) {
     const p = t.por_pagador[nome];
     if (!p) continue;
-    h += cardRec(nome, p.qtd,
-                 p.valor ? brl(p.valor) : "sem valor informado",
+    h += cardRec(nome, p.qtd, valorAgregado(p.valor),
                  "mostrarEventos('" + nome + "', function(e){return e.pagador === '" +
                  nome + "'})");
   }
@@ -1034,9 +1038,9 @@ function renderPorExame() {
   const linhas = rec.por_exame.map((x, i) =>
     "<tr style='cursor:pointer' onclick=\"mostrarEventosPorExame(" + i + ")\">" +
     "<td>" + esc(x.exame) + "</td><td class='num'>" + x.qtd + "</td>" +
-    "<td class='num'>" + (x.valor ? brl(x.valor) : "sem valor informado") +
+    "<td class='num'>" + valorAgregado(x.valor) +
     "</td><td class='num'>" +
-    (x.valor && x.qtd ? brl(x.valor / x.qtd) : "") + "</td></tr>").join("");
+    (x.valor > 0 && x.qtd ? brl(x.valor / x.qtd) : "") + "</td></tr>").join("");
   document.getElementById("tabela-por-exame").innerHTML =
     "<table><thead><tr><th>Exame</th><th class='num'>Qtd</th>" +
     "<th class='num'>Valor</th><th class='num'>Médio</th></tr></thead>" +
