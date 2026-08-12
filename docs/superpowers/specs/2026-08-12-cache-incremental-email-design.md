@@ -120,18 +120,17 @@ conciliação que já existe hoje, inalterada.
 - `GET /api/dados` deixa de usar `dias` para controlar a busca no Outlook.
   A rota dispara a sincronização incremental (rápida) e chama
   `analisar()` sobre o cache completo (2 anos).
-- `analisar(dias=...)` continua aceitando `dias`, mas seu papel muda: a
-  conciliação (matching código/nome, "retornado", buracos de numeração)
-  passa a rodar sobre os 2 anos inteiros do cache — mais precisa, já que
-  um laudo enviado para um exame antigo é encontrado mesmo fora da janela
-  — e só o **resultado devolvido** é filtrado pelas últimas `dias`. Do
-  ponto de vista da interface, o seletor "30/60/90/180 dias" continua
-  funcionando exatamente como hoje (mesma contagem de cartões, mesmas
-  listas), só que instantâneo em qualquer valor, sem o aviso de lentidão.
-  Isso é deliberadamente o comportamento mínimo/provisório: um filtro de
-  exibição de verdade (por coluna, por intervalo de datas) é o
-  sub-projeto de filtros/ordenação de tabelas, que substitui este
-  seletor.
+- `analisar(cache, dias=...)` continua aceitando `dias` com o mesmo papel
+  de hoje: exames e mensagens enviadas fora da janela de `dias` são
+  descartados antes da conciliação (mesmo filtro `recebido >= cutoff` que
+  antes ia embutido na consulta ao Graph, agora aplicado em memória sobre
+  o cache). Do ponto de vista da interface, o seletor "30/60/90/180 dias"
+  continua funcionando exatamente como hoje (mesma contagem de cartões,
+  mesmas listas, mesmo resultado), só que instantâneo em qualquer valor,
+  sem o aviso de lentidão. Isso é deliberadamente o comportamento
+  mínimo/provisório: um filtro de exibição de verdade (por coluna, por
+  intervalo de datas) é o sub-projeto de filtros/ordenação de tabelas, que
+  substitui este seletor.
 - Se algum backfill ainda estiver em andamento, a resposta inclui o
   progresso (ex.: `{"sincronizando": {"pasta": "MAPA", "mes": "2025-06"}}`)
   para o front mostrar na tela de carregamento.
