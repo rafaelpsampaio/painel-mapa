@@ -365,8 +365,8 @@ let dados = null;
 
 function calcularPeriodo(preset) {
   const hoje = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
-  const diasAtras = n => { const d = new Date(hoje); d.setDate(d.getDate() - n); return iso(d); };
+  const iso = d => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const diasAtras = n => { const d = new Date(hoje); d.setDate(d.getDate() - (n - 1)); return iso(d); };
   if (preset === "7") return {de: diasAtras(7), ate: iso(hoje)};
   if (preset === "30") return {de: diasAtras(30), ate: iso(hoje)};
   if (preset === "90") return {de: diasAtras(90), ate: iso(hoje)};
