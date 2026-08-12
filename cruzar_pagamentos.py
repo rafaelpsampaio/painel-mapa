@@ -71,6 +71,8 @@ def anotar_pagamentos(dados):
     }
 
     inicio = min((ex["_dt"] for ex in exames if "_dt" in ex), default=None)
+    fim_str = dados.get("data_ate")
+    fim = (datetime.strptime(fim_str, "%Y-%m-%d") + timedelta(days=3)) if fim_str else None
     usados = set()
     orfaos = []
     for p in itens:
@@ -95,7 +97,8 @@ def anotar_pagamentos(dados):
                 "pagador": p["empresa"],
                 "tipo": p["tipo"],
             }
-        elif inicio and p["data"] >= inicio - timedelta(days=3):
+        elif (inicio and p["data"] >= inicio - timedelta(days=3)
+                and (not fim or p["data"] <= fim)):
             orfaos.append({"empresa": p["empresa"], "nome": p["nome"],
                            "data": p["data"].strftime("%Y-%m-%d"),
                            "origem": p["origem"]})

@@ -52,6 +52,20 @@ def test_anotar_pagamentos_orfao(monkeypatch):
     assert orfaos[0]["nome"] == "Sem Par Nenhum"
 
 
+def test_anotar_pagamentos_respeita_data_ate_nao_reporta_pagamento_futuro(monkeypatch):
+    """Pagamento datado depois do fim do periodo filtrado (dados['data_ate'])
+    nao deve ser reportado como orfao: ele so esta fora da janela vista,
+    nao sem exame correspondente de verdade."""
+    evs = [{"pagador": "IDS", "exame": "MAPA", "paciente": "Sem Par Nenhum",
+            "data": "2026-04-15", "valor": 45.0, "convenio": None,
+            "tipo": "pago", "documento": "ids.pdf"}]
+    monkeypatch.setattr(cp, "coletar_eventos", lambda pastas=None: evs)
+    dados = _dados([_exame("C789", "OUTRA PESSOA", "2026-03-10T12:00:00Z")])
+    dados["data_ate"] = "2026-03-31"
+    orfaos = cp.anotar_pagamentos(dados)
+    assert orfaos == []
+
+
 def test_anotar_pagamentos_baixa_nao_marca_esperado(monkeypatch):
     """Exame retornado com baixa nao deve ficar pagamento_esperado mesmo
     dentro da janela de cobertura do pagador; o irmao sem baixa, na mesma
