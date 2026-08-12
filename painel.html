@@ -193,7 +193,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       <option value="30" selected>30 dias</option>
       <option value="60">60 dias</option>
       <option value="90">90 dias</option>
-      <option value="180">180 dias (mais lento)</option>
+      <option value="180">180 dias</option>
     </select>
   </label>
   <button id="btn-atualizar" onclick="carregar()"
@@ -214,6 +214,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
 <div class="tela" id="carregando">
   <div class="spinner"></div>
   <p>Lendo a caixa de email&hellip; isso pode levar um minuto.</p>
+  <p class="nota" id="carregando-status">&nbsp;</p>
 </div>
 
 <div class="tela oculto" id="tela-login">
@@ -395,12 +396,20 @@ async function carregar() {
   btn.disabled = true;
   btnDocs.disabled = true;
   mostrar("carregando");
+  document.getElementById("carregando-status").innerHTML = "&nbsp;";
   try {
     const dias = document.getElementById("dias").value;
-    const r = await fetch("/api/dados?dias=" + dias);
-    const d = await r.json();
-    if (d.precisa_login) { await telaLogin(); return; }
-    if (d.erro) throw new Error(d.erro);
+    let d;
+    while (true) {
+      const r = await fetch("/api/dados?dias=" + dias);
+      d = await r.json();
+      if (d.precisa_login) { await telaLogin(); return; }
+      if (d.erro) throw new Error(d.erro);
+      if (!d.sincronizando) break;
+      document.getElementById("carregando-status").textContent =
+        "Lendo histórico: " + formatMes(d.sincronizando.mes) +
+        " (" + d.sincronizando.pasta + ")…";
+    }
     dados = d;
     render();
     carregarRecebimentos();
