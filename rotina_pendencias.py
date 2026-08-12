@@ -3,7 +3,8 @@
 Rotina de conciliacao de exames MAPA: quais exames recebidos ja foram
 retornados (laudo enviado) e quais estao pendentes.
 
-Uso:  py rotina_pendencias.py [--dias 30] [--listar-retornados] [--salvar-historico]
+Uso:  py rotina_pendencias.py [--dias N] [--listar-retornados] [--salvar-historico]
+      (--dias omitido considera todo o historico do cache)
 
 Logica (descoberta na investigacao da caixa):
  - Exames chegam como anexo .dmw cujo nome contem o codigo unico (ex. ED9-00159).
@@ -279,17 +280,26 @@ def registrar_baixa(codigo, motivo=""):
 
 
 # ------------------------------------------------------------- nucleo
-def analisar(cache, dias=30):
+def analisar(cache, data_de=None, data_ate=None):
     """Roda a conciliacao sobre as mensagens ja sincronizadas no cache
-    local (cache_email.py). Nao faz nenhuma chamada de rede."""
+    local (cache_email.py). Nao faz nenhuma chamada de rede.
+
+    data_de/data_ate: intervalo absoluto ('AAAA-MM-DD', cada ponta
+    opcional). Sem nenhum dos dois, considera todo o cache. data_de cobre
+    o dia inteiro a partir de 00:00; data_ate cobre o dia inteiro ate
+    23:59:59 (senao mensagens do ultimo dia recebidas a tarde ficariam de
+    fora)."""
     agora = datetime.now(timezone.utc)
-    cutoff = (agora - timedelta(days=dias)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    cutoff_de = f"{data_de}T00:00:00Z" if data_de else None
+    cutoff_ate = f"{data_ate}T23:59:59Z" if data_ate else None
 
     # ---- recebidos: exames (.dmw) ----
     exames = {}
     for pasta in PASTAS_RECEBIDOS:
         for m in cache_email.mensagens(cache, pasta).values():
-            if m["recebido"] < cutoff:
+            if cutoff_de and m["recebido"] < cutoff_de:
+                continue
+            if cutoff_ate and m["recebido"] > cutoff_ate:
                 continue
             achados = codigos_de_anexos(m["anexos"], (".DMW",))
             if not achados:
@@ -327,7 +337,8 @@ def analisar(cache, dias=30):
 
     # ---- enviados: laudos (.pdf) e conversas respondidas ----
     enviados = [m for m in cache_email.mensagens(cache, "sentitems").values()
-                if m["recebido"] >= cutoff]
+                if (not cutoff_de or m["recebido"] >= cutoff_de)
+                and (not cutoff_ate or m["recebido"] <= cutoff_ate)]
     codigos_enviados = {}
     conversas_respondidas = defaultdict(list)
     for m in enviados:
@@ -430,7 +441,8 @@ def analisar(cache, dias=30):
 
     return {
         "gerado_em": agora.astimezone().strftime("%d/%m/%Y %H:%M"),
-        "dias": dias,
+        "data_de": data_de,
+        "data_ate": data_ate,
         "contagens": {
             "recebidos": len(exames),
             "retornados": len(retornados),
@@ -460,11 +472,27 @@ def _fmt_hora(iso):
             .astimezone().strftime("%d/%m %H:%M"))
 
 
+def _fmt_data_br(iso_data):
+    p = iso_data.split("-")
+    return f"{p[2]}/{p[1]}/{p[0]}"
+
+
+def _periodo_texto(data_de, data_ate):
+    if not data_de and not data_ate:
+        return "todo o periodo"
+    if data_de and data_ate:
+        return f"{_fmt_data_br(data_de)} a {_fmt_data_br(data_ate)}"
+    if data_de:
+        return f"a partir de {_fmt_data_br(data_de)}"
+    return f"ate {_fmt_data_br(data_ate)}"
+
+
 def relatorio_texto(dados, listar_retornados=False):
     out = []
     w = out.append
     c = dados["contagens"]
-    w(f"CONCILIACAO DE EXAMES MAPA - ultimos {dados['dias']} dias "
+    w(f"CONCILIACAO DE EXAMES MAPA - "
+      f"{_periodo_texto(dados['data_de'], dados['data_ate'])} "
       f"({dados['gerado_em']})")
     w("=" * 70)
     w(f"Exames recebidos (anexo .dmw): {c['recebidos']}   "
@@ -552,7 +580,8 @@ def relatorio_texto(dados, listar_retornados=False):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--dias", type=int, default=30)
+    ap.add_argument("--dias", type=int, default=None,
+                    help="considera so os ultimos N dias (padrao: tudo)")
     ap.add_argument("--listar-retornados", action="store_true")
     ap.add_argument("--salvar-historico", action="store_true",
                     help="salva copia datada em relatorios\\")
@@ -566,7 +595,11 @@ def main():
             break
         print(f"Sincronizando: {progresso['pasta']} {progresso['mes']}...")
 
-    dados = analisar(cache, args.dias)
+    data_de = None
+    if args.dias is not None:
+        data_de = (datetime.now(timezone.utc) -
+                   timedelta(days=args.dias)).strftime("%Y-%m-%d")
+    dados = analisar(cache, data_de)
     relatorio = relatorio_texto(dados, args.listar_retornados)
 
     with open("relatorio_pendencias.txt", "w", encoding="utf-8") as f:
