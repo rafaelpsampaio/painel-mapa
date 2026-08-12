@@ -2,6 +2,7 @@ import io
 import json
 import urllib.error
 import urllib.parse
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -220,3 +221,120 @@ def test_buscar_sem_fim_nao_inclui_lt(monkeypatch):
     ce._buscar("tok", "id-mapa", ce.PASTAS["MAPA"], "2026-06-01T00:00:00Z")
     url_decodificada = urllib.parse.unquote(urls[0])
     assert " lt " not in url_decodificada
+
+
+def _msg(id_, subject="x"):
+    return {"id": id_, "subject": subject, "receivedDateTime": "2026-08-12T00:00:00Z"}
+
+
+def test_primeiro_passo_faz_backfill_do_bloco_mais_recente(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 65)
+    cache = ce.carregar_cache()
+    agora = datetime(2026, 8, 12, tzinfo=timezone.utc)
+
+    chamadas = []
+
+    def fake_buscar(token, pasta_id, config, inicio_iso, fim_iso=None):
+        chamadas.append((pasta_id, inicio_iso, fim_iso))
+        return []
+
+    monkeypatch.setattr(ce, "_buscar", fake_buscar)
+    monkeypatch.setattr(ce, "_resolver_ids_pastas",
+                        lambda token: {"MAPA": "id-mapa", "UNIMED": "id-unimed", "IDS": "id-ids"})
+
+    progresso = ce.sincronizar_um_passo("tok", cache, agora=agora)
+
+    assert progresso == {"pasta": "inbox", "mes": "2026-07"}
+    assert cache["pastas"]["inbox"]["backfill_completo_ate"] == "2026-07-13T00:00:00Z"
+    assert len(chamadas) == 1
+    assert chamadas[0][0] == "inbox"  # pasta_id de inbox e o proprio nome: nao precisou resolver
+
+
+def test_backfill_avanca_ate_cobrir_o_limite_e_marca_ultimo_sync(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 65)
+    cache = ce.carregar_cache()
+    agora = datetime(2026, 8, 12, tzinfo=timezone.utc)
+    monkeypatch.setattr(ce, "_buscar", lambda *a, **k: [])
+    monkeypatch.setattr(ce, "_resolver_ids_pastas",
+                        lambda token: {"MAPA": "m", "UNIMED": "u", "IDS": "i"})
+
+    passos = 0
+    while True:
+        passos += 1
+        assert passos < 50, "sincronizacao nao terminou (possivel loop infinito)"
+        p = ce.sincronizar_um_passo("tok", cache, agora=agora)
+        if p is None:
+            break
+
+    for pasta in ce.PASTAS:
+        estado = cache["pastas"][pasta]
+        limite = agora - timedelta(days=ce.DIAS_BACKFILL)
+        assert ce._parse(estado["backfill_completo_ate"]) <= limite
+        assert estado["ultimo_sync"] is not None
+
+
+def test_apos_backfill_completo_proximo_passo_e_incremental(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 65)
+    cache = ce.carregar_cache()
+    agora = datetime(2026, 8, 12, tzinfo=timezone.utc)
+    monkeypatch.setattr(ce, "_buscar", lambda *a, **k: [])
+    monkeypatch.setattr(ce, "_resolver_ids_pastas",
+                        lambda token: {"MAPA": "m", "UNIMED": "u", "IDS": "i"})
+    while ce.sincronizar_um_passo("tok", cache, agora=agora) is not None:
+        pass
+
+    chamadas = []
+
+    def fake_buscar_incremental(token, pasta_id, config, inicio_iso, fim_iso=None):
+        chamadas.append((pasta_id, inicio_iso, fim_iso))
+        return [_msg("novo-1")] if pasta_id == "inbox" else []
+
+    monkeypatch.setattr(ce, "_buscar", fake_buscar_incremental)
+    resultado = ce.sincronizar_um_passo("tok", cache, agora=agora + timedelta(hours=2))
+
+    assert resultado is None
+    assert len(chamadas) == 5  # uma consulta por pasta
+    assert all(fim is None for _, _, fim in chamadas)  # incremental: sem limite superior
+    assert "novo-1" in cache["pastas"]["inbox"]["mensagens"]
+
+
+def test_sincronizar_grava_mensagens_no_registro_da_pasta(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 1)  # backfill de 1 dia: termina numa chamada
+    cache = ce.carregar_cache()
+    agora = datetime(2026, 8, 12, tzinfo=timezone.utc)
+    msg_real = {
+        "id": "abc123",
+        "subject": "Exame MAPA",
+        "receivedDateTime": "2026-08-11T10:00:00Z",
+        "conversationId": "conv-1",
+        "from": {"emailAddress": {"address": "contato@ids.med.br"}},
+        "body": {"content": "texto"},
+        "attachments": [{"name": "0RC-04973 FULANA.dmw"}],
+    }
+    monkeypatch.setattr(ce, "_buscar", lambda *a, **k: [msg_real])
+    monkeypatch.setattr(ce, "_resolver_ids_pastas",
+                        lambda token: {"MAPA": "m", "UNIMED": "u", "IDS": "i"})
+
+    ce.sincronizar_um_passo("tok", cache, agora=agora)
+
+    registro = cache["pastas"]["inbox"]["mensagens"]["abc123"]
+    assert registro["assunto"] == "Exame MAPA"
+    assert registro["anexos"] == ["0RC-04973 FULANA.dmw"]
+
+
+def test_resolver_ids_pastas_nao_e_chamado_para_inbox_e_sentitems(tmp_path, monkeypatch):
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 65)
+    cache = ce.carregar_cache()
+    agora = datetime(2026, 8, 12, tzinfo=timezone.utc)
+    monkeypatch.setattr(ce, "_buscar", lambda *a, **k: [])
+    chamado = []
+    monkeypatch.setattr(ce, "_resolver_ids_pastas", lambda token: chamado.append(1) or {})
+
+    ce.sincronizar_um_passo("tok", cache, agora=agora)  # backfill do inbox, primeira pasta
+
+    assert chamado == []

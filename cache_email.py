@@ -16,6 +16,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timedelta, timezone
 
 ARQ_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "cache_emails.json")
@@ -161,3 +162,80 @@ def _buscar(token, pasta_id, config, inicio_iso, fim_iso=None):
               f"&$orderby={ordem}&$expand={expand}")
     url = f"{GRAPH}/me/mailFolders/{pasta_id}/messages?{params}"
     return _listar_pagina(token, url)
+
+
+DIAS_BACKFILL = 730  # ~2 anos
+TAMANHO_BLOCO_DIAS = 30
+MARGEM_INCREMENTAL = timedelta(days=1)
+
+
+def _fmt(dt):
+    return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _parse(iso):
+    return datetime.fromisoformat(iso.replace("Z", "+00:00"))
+
+
+def _limite_backfill(agora):
+    return agora - timedelta(days=DIAS_BACKFILL)
+
+
+def sincronizar_um_passo(token, cache, agora=None):
+    """Avanca uma unidade de sincronizacao do cache local e grava o
+    resultado em disco.
+
+    Se alguma pasta ainda nao cobre os ultimos DIAS_BACKFILL dias, busca
+    mais um bloco mensal dessa pasta (do mais recente para o mais antigo)
+    e devolve {"pasta": nome, "mes": "AAAA-MM"} -- o chamador deve repetir
+    a chamada ate receber None. Quando todas as pastas ja tem o backfill
+    completo, faz a sincronizacao incremental (mensagens novas desde a
+    ultima vez) de todas elas numa unica chamada e devolve None.
+    """
+    agora = agora or datetime.now(timezone.utc)
+    limite = _limite_backfill(agora)
+    ids_pastas = {}
+
+    def resolver(pasta):
+        if pasta in ("inbox", "sentitems"):
+            return pasta
+        if not ids_pastas:
+            ids_pastas.update(_resolver_ids_pastas(token))
+        return ids_pastas.get(pasta, pasta)
+
+    pasta_pendente = None
+    for pasta in PASTAS:
+        estado = cache["pastas"][pasta]
+        completo_ate = (_parse(estado["backfill_completo_ate"])
+                        if estado["backfill_completo_ate"] else None)
+        if completo_ate is None or completo_ate > limite:
+            pasta_pendente = pasta
+            break
+
+    if pasta_pendente:
+        pasta = pasta_pendente
+        config = PASTAS[pasta]
+        estado = cache["pastas"][pasta]
+        fim = (_parse(estado["backfill_completo_ate"])
+               if estado["backfill_completo_ate"] else agora)
+        inicio_bloco = max(limite, fim - timedelta(days=TAMANHO_BLOCO_DIAS))
+        msgs = _buscar(token, resolver(pasta), config,
+                       _fmt(inicio_bloco), _fmt(fim))
+        for msg in msgs:
+            estado["mensagens"][msg["id"]] = _registro_de(msg, config)
+        estado["backfill_completo_ate"] = _fmt(inicio_bloco)
+        if inicio_bloco <= limite:
+            estado["ultimo_sync"] = _fmt(agora)
+        salvar_cache(cache)
+        return {"pasta": pasta, "mes": inicio_bloco.strftime("%Y-%m")}
+
+    for pasta, config in PASTAS.items():
+        estado = cache["pastas"][pasta]
+        desde = (_parse(estado["ultimo_sync"]) - MARGEM_INCREMENTAL
+                 if estado["ultimo_sync"] else limite)
+        msgs = _buscar(token, resolver(pasta), config, _fmt(desde))
+        for msg in msgs:
+            estado["mensagens"][msg["id"]] = _registro_de(msg, config)
+        estado["ultimo_sync"] = _fmt(agora)
+    salvar_cache(cache)
+    return None
