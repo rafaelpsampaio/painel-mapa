@@ -26,7 +26,6 @@ esta em analisar(); o painel web (painel.py) usa a mesma funcao.
 
 import argparse
 import difflib
-import html as htmlmod
 import os
 import re
 import sys
