@@ -824,6 +824,7 @@ function render() {
 
   preencherFiltroEmpresas();
   renderExames();
+  if (rec) renderSemPagamento();
 }
 
 for (const id of ["f-busca", "f-empresa", "f-status", "f-pag"]) {
@@ -995,7 +996,7 @@ async function carregarRecebimentos() {
   renderCardsRecebimentos();
   renderMeses(vistaMes);
   renderPorExame();
-  renderSemPagamento();       // Task 11 (stub até lá)
+  renderSemPagamento();
   renderDocumentosFin();
 }
 
@@ -1044,8 +1045,80 @@ function mostrarEventosDoMes(i) {
   });
 }
 
+function casosSemPagamento() {
+  const casos = (rec && rec.sem_pagamento || []).map(c => ({...c}));
+  // casos do MAPA vindos do email (ja carregados em `dados`)
+  if (dados) {
+    for (const ex of todosExames()) {
+      if (!ex.pagamento_esperado || ex.pagamento) continue;
+      casos.push({paciente: ex.nome || "(sem nome)", exame: "MAPA",
+                  data: (ex.recebido || "").slice(0, 10),
+                  fonte: "Email (" + ex.codigo + ")", forca: "forte",
+                  codigo: ex.codigo});
+    }
+  }
+  casos.sort((a, b) => (a.forca !== "forte") - (b.forca !== "forte") ||
+                       (a.data || "").localeCompare(b.data || ""));
+  return casos;
+}
+
 function renderSemPagamento() {
-  // Task 11
+  const sec = document.getElementById("sec-sem-pagamento");
+  if (!document.getElementById("sp-busca")) {
+    // controles de filtro sao construidos uma unica vez: reconstrui-los a
+    // cada digitacao na busca faria o campo perder o foco/cursor
+    sec.innerHTML = "<h2>Sem pagamento identificado</h2>" +
+      "<p class='nota'>Exames com evidência de realização e nenhum pagamento " +
+      "casado. \"Período já pago e não veio\" merece cobrança; \"aguardando " +
+      "faturamento\" costuma ser atraso normal.</p>" +
+      "<div class='filtros'>" +
+      "<input type='text' id='sp-busca' placeholder='Buscar paciente&hellip;' " +
+      "oninput='renderSemPagamento()'>" +
+      "<select id='sp-exame' onchange='renderSemPagamento()'>" +
+      "<option value=''>Todos os exames</option></select>" +
+      "<select id='sp-forca' onchange='renderSemPagamento()'>" +
+      "<option value=''>Todas as situações</option>" +
+      "<option value='forte'>Período já pago e não veio</option>" +
+      "<option value='fraca'>Aguardando faturamento</option></select>" +
+      "<span class='contagem' id='sp-contagem'></span></div>" +
+      "<div id='sp-lista' class='doc-fin-lista'></div>";
+  }
+
+  const casos = casosSemPagamento();
+  const exames = [...new Set(casos.map(c => c.exame))];
+  const selExame = document.getElementById("sp-exame");
+  const fExameAtual = selExame.value;
+  selExame.innerHTML = "<option value=''>Todos os exames</option>" +
+    exames.map(x => "<option" + (x === fExameAtual ? " selected" : "") +
+      ">" + esc(x) + "</option>").join("");
+
+  const fExame = selExame.value;
+  const fForca = document.getElementById("sp-forca").value;
+  const fBusca = normJs(document.getElementById("sp-busca").value.trim());
+  const visiveis = casos.filter(c =>
+    (!fExame || c.exame === fExame) && (!fForca || c.forca === fForca) &&
+    (!fBusca || normJs(c.paciente).includes(fBusca)));
+  const fortes = casos.filter(c => c.forca === "forte").length;
+  document.getElementById("sp-contagem").textContent =
+    visiveis.length + " caso(s) · " + fortes + " forte(s)";
+
+  const linhas = visiveis.map(c => {
+    const badge = c.forca === "forte"
+      ? "<span class='badge b-atrasado'>Período já pago e não veio</span>"
+      : "<span class='badge b-provavel'>Aguardando faturamento</span>";
+    const cob = rec && rec.cobertura && rec.cobertura[c.exame];
+    const detalhe = "<div class='corpo'><p class='nota'>Fonte: " +
+      esc(c.fonte) + (cob ? " · Pagamentos deste exame cobrem " +
+      dataBr(cob.inicio) + " a " + dataBr(cob.fim) : "") + "</p>" +
+      (c.codigo ? "<button onclick=\"darBaixa('" + esc(c.codigo) +
+       "')\">Dar baixa</button>" : "") + "</div>";
+    return "<details><summary><span class='doc-data'>" + esc(dataBr(c.data)) +
+      "</span><span class='doc-tipo'>" + esc(c.paciente) + "</span>" +
+      "<span>" + esc(c.exame) + "</span>" + badge + "</summary>" + detalhe +
+      "</details>";
+  }).join("");
+  document.getElementById("sp-lista").innerHTML =
+    linhas || "<p class='nota'>Nenhum caso pendente. Tudo casado.</p>";
 }
 
 function cardRec(rotulo, valor, sub, onclick) {
