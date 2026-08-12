@@ -379,11 +379,27 @@ def _exames_realizados(pastas=None):
     return exames
 
 
-def recebimentos(pastas=None):
-    """Estrutura completa pro GET /api/recebimentos."""
+def _dentro_do_periodo(data, data_de, data_ate):
+    """True se `data` (AAAA-MM-DD ou None) esta dentro do intervalo. Uma
+    data desconhecida (None) nunca e excluida pelo filtro."""
+    if not data:
+        return True
+    if data_de and data < data_de:
+        return False
+    if data_ate and data > data_ate:
+        return False
+    return True
+
+
+def recebimentos(pastas=None, data_de=None, data_ate=None):
+    """Estrutura completa pro GET /api/recebimentos.
+
+    data_de/data_ate: intervalo absoluto ('AAAA-MM-DD', cada ponta
+    opcional), aplicado antes de qualquer agregacao."""
     from datetime import datetime as _dt
     import ler_repasses as lr
     evs = coletar_eventos(pastas)
+    evs = [e for e in evs if _dentro_do_periodo(e["data"], data_de, data_ate)]
 
     por_pagador = {}
     por_exame = {}
@@ -431,7 +447,9 @@ def recebimentos(pastas=None):
         if tokens and evd["data"]:
             indice.setdefault((evd["exame"], tokens[0]), []).append(evd)
     sem_pagamento = []
-    for ex in _exames_realizados(pastas):
+    realizados = [ex for ex in _exames_realizados(pastas)
+                  if _dentro_do_periodo(ex["data"], data_de, data_ate)]
+    for ex in realizados:
         if ex["assinado"] != "Sim":
             continue
         exame = exame_canonico(ex["setor"])

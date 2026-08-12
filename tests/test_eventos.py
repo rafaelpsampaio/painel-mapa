@@ -227,3 +227,28 @@ def test_sem_pagamento_forte_e_fraca(monkeypatch):
     assert casos["Pedro Alves"]["forca"] == "forte"
     assert casos["Rita Nunes"]["forca"] == "fraca"
     assert r["sem_pagamento"][0]["paciente"] == "Pedro Alves"  # forte primeiro
+
+
+def test_recebimentos_filtra_por_data_de_ate(monkeypatch):
+    evs = [
+        _ev(paciente="Ana", data="2026-01-10"),
+        _ev(paciente="Bia", data="2026-03-15"),
+        _ev(paciente="Carla", data=None),
+    ]
+    monkeypatch.setattr(ev, "coletar_eventos", lambda pastas=None: evs)
+    monkeypatch.setattr(ev, "_exames_realizados", lambda pastas=None: [])
+    import ler_repasses as lr
+    monkeypatch.setattr(lr, "financeiro", lambda pastas=None: {"empresas": {}})
+    r = ev.recebimentos(data_de="2026-02-01", data_ate="2026-04-01")
+    pacientes = {e["paciente"] for e in r["eventos"]}
+    assert pacientes == {"Bia", "Carla"}
+
+
+def test_recebimentos_sem_filtro_mantem_comportamento_atual(monkeypatch):
+    evs = [_ev(paciente="Ana", data="2020-01-01"), _ev(paciente="Bia", data="2030-01-01")]
+    monkeypatch.setattr(ev, "coletar_eventos", lambda pastas=None: evs)
+    monkeypatch.setattr(ev, "_exames_realizados", lambda pastas=None: [])
+    import ler_repasses as lr
+    monkeypatch.setattr(lr, "financeiro", lambda pastas=None: {"empresas": {}})
+    r = ev.recebimentos()
+    assert {e["paciente"] for e in r["eventos"]} == {"Ana", "Bia"}
