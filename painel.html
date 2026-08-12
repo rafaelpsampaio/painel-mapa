@@ -153,6 +153,11 @@
   .gb-fatia { width: 100%; }
   .gb-rotulo { font-size: 11px; color: var(--cor-texto-fraco); }
 
+  .cob-grade { display: flex; flex-wrap: wrap; gap: 24px; }
+  .cob-item { display: flex; flex-direction: column; align-items: center;
+    gap: 6px; width: 140px; text-align: center; }
+  .cob-nome { font-weight: 600; }
+
   .transacoes-cabeca { display: flex; flex-wrap: wrap; align-items: center;
     justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   .transacoes-cabeca h2 { margin: 0; }
@@ -326,6 +331,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       </div>
       <div id="eventos-corpo"></div>
     </section>
+    <div id="sec-cobertura-fin"></div>
     <div id="sec-documentos-fin"></div>
     <div id="sec-orfaos"></div>
   </div>
@@ -1101,6 +1107,7 @@ async function carregarRecebimentos(periodo) {
   renderMeses(vistaMes);
   renderPorExame();
   renderSemPagamento();
+  renderCobertura();
   renderDocumentosFin();
 }
 
@@ -1334,6 +1341,65 @@ function renderEventosFiltrados() {
     "<th>Documento</th></tr></thead><tbody>" + linhas + "</tbody></table>" +
     (lista.length > 500 ? "<p class='nota'>Mostrando 500 de " + num(lista.length) +
      "; use a busca pra refinar.</p>" : "");
+}
+
+function mesesCobertura(periodo) {
+  const primeiro = periodo.de
+    ? periodo.de.slice(0, 7)
+    : (rec.por_mes[0] ? rec.por_mes[0].mes : null);
+  if (!primeiro) return [];
+  const hoje = new Date();
+  const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0");
+  const ultimoFiltro = periodo.ate ? periodo.ate.slice(0, 7) : mesAtual;
+  const ultimo = ultimoFiltro < mesAtual ? ultimoFiltro : mesAtual;
+  const meses = [];
+  let [ano, mes] = primeiro.split("-").map(Number);
+  const [anoFim, mesFim] = ultimo.split("-").map(Number);
+  while (ano < anoFim || (ano === anoFim && mes <= mesFim)) {
+    meses.push(ano + "-" + String(mes).padStart(2, "0"));
+    mes++;
+    if (mes > 12) { mes = 1; ano++; }
+  }
+  return meses;
+}
+
+function coberturaEmpresa(nome, meses) {
+  const porMes = new Map(rec.por_mes.map(m => [m.mes, m]));
+  const faltando = meses.filter(ym => !(porMes.get(ym) && porMes.get(ym).por_pagador[nome]));
+  const cobertos = meses.length - faltando.length;
+  return { pct: meses.length ? Math.round(100 * cobertos / meses.length) : 0, faltando };
+}
+
+function svgDonut(pct, cor) {
+  const r = 40, c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  return "<svg width='96' height='96' viewBox='0 0 96 96'>" +
+    "<circle cx='48' cy='48' r='" + r + "' fill='none' stroke='var(--cor-borda)' stroke-width='12'/>" +
+    "<circle cx='48' cy='48' r='" + r + "' fill='none' stroke='" + cor + "' stroke-width='12' " +
+    "stroke-dasharray='" + c.toFixed(2) + "' stroke-dashoffset='" + offset.toFixed(2) + "' " +
+    "style='transform:rotate(-90deg);transform-origin:48px 48px'/>" +
+    "<text x='48' y='48' text-anchor='middle' dominant-baseline='central' " +
+    "font-size='20' font-weight='700' fill='var(--cor-texto)'>" + pct + "%</text></svg>";
+}
+
+function renderCobertura() {
+  const sec = document.getElementById("sec-cobertura-fin");
+  const meses = mesesCobertura(periodoAtivo());
+  if (!meses.length) { sec.innerHTML = ""; return; }
+  const itens = ["IDS", "Unimed", "CardioPro"].map(nome => {
+    const { pct, faltando } = coberturaEmpresa(nome, meses);
+    const cor = pct === 100 ? "var(--cor-ok)" : pct === 0 ? "var(--cor-erro)" : "var(--cor-alerta)";
+    const nota = faltando.length
+      ? "Faltou: " + faltando.map(formatMes).join(", ")
+      : "Cobertura completa";
+    return "<div class='cob-item'>" + svgDonut(pct, cor) +
+      "<div class='cob-nome'>" + esc(nome) + "</div>" +
+      "<div class='nota'>" + esc(nota) + "</div></div>";
+  }).join("");
+  sec.innerHTML = "<section class='bloco'><h2>Cobertura de documentos</h2>" +
+    "<p class='nota'>Meses, dentro do período filtrado, com pelo menos um " +
+    "pagamento registrado de cada empresa.</p>" +
+    "<div class='cob-grade'>" + itens + "</div></section>";
 }
 
 function renderDocumentosFin() {
