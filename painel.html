@@ -446,6 +446,38 @@ function normJs(s) {
   return (s || "").toUpperCase().normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
 }
+function ordenarLista(lista, campo, direcao, tipo) {
+  const sinal = direcao === "asc" ? 1 : -1;
+  return lista.slice().sort((a, b) => {
+    let va = a[campo], vb = b[campo];
+    if (tipo === "numero") return sinal * ((va || 0) - (vb || 0));
+    if (tipo === "data") return sinal * (va || "").localeCompare(vb || "");
+    return sinal * (va || "").toString().localeCompare((vb || "").toString(), "pt-BR");
+  });
+}
+
+function alternarOrdenacao(estado, campo) {
+  if (estado.campo === campo) {
+    estado.direcao = estado.direcao === "asc" ? "desc" : "asc";
+  } else {
+    estado.campo = campo;
+    estado.direcao = "asc";
+  }
+}
+
+function tipoDaColuna(colunas, campo) {
+  const c = colunas.find(c => c.chave === campo);
+  return c ? c.tipo : "texto";
+}
+
+function cabecalhoOrdenavel(colunas, estado, onClickFn) {
+  return colunas.map(c => {
+    const ativo = estado.campo === c.chave;
+    const seta = ativo ? (estado.direcao === "asc" ? " ▲" : " ▼") : "";
+    return "<th style='cursor:pointer' onclick='" + onClickFn + "(\"" +
+      c.chave + "\")'>" + esc(c.rotulo) + seta + "</th>";
+  }).join("");
+}
 function mostrar(id) {
   for (const t of ["carregando", "tela-login", "tela-erro", "conteudo"])
     document.getElementById(t).classList.toggle("oculto", t !== id);
@@ -582,8 +614,23 @@ function todosExames() {
   return out;
 }
 
-function renderExames() {
-  if (!dados) return;
+const COLUNAS_EXAMES = [
+  {chave: "codigo", rotulo: "Código", tipo: "texto"},
+  {chave: "nome", rotulo: "Paciente", tipo: "texto"},
+  {chave: "empresa", rotulo: "Empresa", tipo: "texto"},
+  {chave: "recebido", rotulo: "Recebido", tipo: "data"},
+  {chave: "prazo", rotulo: "Prazo", tipo: "data"},
+  {chave: "status", rotulo: "Status", tipo: "texto"},
+  {chave: "retornado_em", rotulo: "Laudo", tipo: "data"},
+];
+let ordExames = {campo: "recebido", direcao: "desc"};
+
+function ordenarExamesPor(campo) {
+  alternarOrdenacao(ordExames, campo);
+  renderExames();
+}
+
+function listaExamesFiltrada() {
   const busca = normJs(document.getElementById("f-busca").value.trim());
   const emp = document.getElementById("f-empresa").value;
   const st = document.getElementById("f-status").value;
@@ -597,6 +644,14 @@ function renderExames() {
   if (pg === "nao") lista = lista.filter(e => !e.pagamento);
   if (busca) lista = lista.filter(e =>
     normJs((e.nome || "") + " " + e.codigo).includes(busca));
+  return lista;
+}
+
+function renderExames() {
+  if (!dados) return;
+  let lista = listaExamesFiltrada();
+  lista = ordenarLista(lista, ordExames.campo, ordExames.direcao,
+    tipoDaColuna(COLUNAS_EXAMES, ordExames.campo));
 
   document.getElementById("f-contagem").textContent =
     lista.length + " exame" + (lista.length === 1 ? "" : "s");
@@ -641,8 +696,7 @@ function renderExames() {
   }).join("");
 
   document.getElementById("tabela-exames").innerHTML =
-    "<table><tr><th>Código</th><th>Paciente</th><th>Empresa</th>" +
-    "<th>Recebido</th><th>Prazo</th><th>Status</th><th>Laudo</th>" +
+    "<table><tr>" + cabecalhoOrdenavel(COLUNAS_EXAMES, ordExames, "ordenarExamesPor") +
     "<th>Pagamento</th><th></th></tr>" + linhas + "</table>" +
     (corte ? "<p class='nota'>Mostrando os primeiros " + LIMITE +
       "; refine os filtros para ver o restante.</p>" : "");
@@ -1139,21 +1193,35 @@ function renderCardsRecebimentos() {
   document.getElementById("cards-recebimentos").innerHTML = h;
 }
 
-function mostrarEventosPorExame(i) {
-  const exame = rec.por_exame[i].exame;
+const COLUNAS_POR_EXAME = [
+  {chave: "exame", rotulo: "Exame", tipo: "texto"},
+  {chave: "qtd", rotulo: "Qtd", tipo: "numero"},
+  {chave: "valor", rotulo: "Valor", tipo: "numero"},
+];
+let ordPorExame = {campo: "qtd", direcao: "desc"};
+
+function ordenarPorExamePor(campo) {
+  alternarOrdenacao(ordPorExame, campo);
+  renderPorExame();
+}
+
+function mostrarEventosPorExame(exame) {
   mostrarEventos(exame, function(e) { return e.exame === exame; });
 }
 
 function renderPorExame() {
-  const linhas = rec.por_exame.map((x, i) =>
-    "<tr style='cursor:pointer' onclick=\"mostrarEventosPorExame(" + i + ")\">" +
+  const lista = ordenarLista(rec.por_exame, ordPorExame.campo, ordPorExame.direcao,
+    tipoDaColuna(COLUNAS_POR_EXAME, ordPorExame.campo));
+  const linhas = lista.map(x =>
+    "<tr style='cursor:pointer' onclick=\"mostrarEventosPorExame('" + x.exame + "')\">" +
     "<td>" + esc(x.exame) + "</td><td class='num'>" + x.qtd + "</td>" +
     "<td class='num'>" + valorAgregado(x.valor) +
     "</td><td class='num'>" +
     (x.valor > 0 && x.qtd ? brl(x.valor / x.qtd) : "") + "</td></tr>").join("");
   document.getElementById("tabela-por-exame").innerHTML =
-    "<table><thead><tr><th>Exame</th><th class='num'>Qtd</th>" +
-    "<th class='num'>Valor</th><th class='num'>Médio</th></tr></thead>" +
+    "<table><thead><tr>" +
+    cabecalhoOrdenavel(COLUNAS_POR_EXAME, ordPorExame, "ordenarPorExamePor") +
+    "<th class='num'>Médio</th></tr></thead>" +
     "<tbody>" + linhas + "</tbody></table>";
 }
 
@@ -1168,10 +1236,29 @@ function mostrarEventos(titulo, filtroFn) {
   bloco.scrollIntoView({behavior: "smooth"});
 }
 
-function renderEventosFiltrados() {
+const COLUNAS_EVENTOS = [
+  {chave: "paciente", rotulo: "Paciente", tipo: "texto"},
+  {chave: "exame", rotulo: "Exame", tipo: "texto"},
+  {chave: "data", rotulo: "Data", tipo: "data"},
+  {chave: "pagador", rotulo: "Pagador", tipo: "texto"},
+  {chave: "valor", rotulo: "Valor", tipo: "numero"},
+];
+let ordEventos = {campo: "data", direcao: "desc"};
+
+function ordenarEventosPor(campo) {
+  alternarOrdenacao(ordEventos, campo);
+  renderEventosFiltrados();
+}
+
+function listaEventosFiltrada() {
   const busca = normJs(document.getElementById("eventos-busca").value.trim());
-  const lista = eventosVisiveis.filter(e =>
-    !busca || normJs(e.paciente).includes(busca));
+  return eventosVisiveis.filter(e => !busca || normJs(e.paciente).includes(busca));
+}
+
+function renderEventosFiltrados() {
+  let lista = listaEventosFiltrada();
+  lista = ordenarLista(lista, ordEventos.campo, ordEventos.direcao,
+    tipoDaColuna(COLUNAS_EVENTOS, ordEventos.campo));
   const linhas = lista.slice(0, 500).map(e =>
     "<tr><td>" + esc(e.paciente) + "</td><td>" + esc(e.exame) + "</td>" +
     "<td>" + esc(dataBrAno(e.data)) + "</td><td>" + esc(e.pagador) +
@@ -1180,9 +1267,9 @@ function renderEventosFiltrados() {
       : (e.tipo === "faturado" ? "faturado" : "sem valor")) + "</td>" +
     "<td class='nota'>" + esc(e.documento) + "</td></tr>").join("");
   document.getElementById("eventos-corpo").innerHTML =
-    "<table><thead><tr><th>Paciente</th><th>Exame</th><th>Data</th>" +
-    "<th>Pagador</th><th class='num'>Valor</th><th>Documento</th></tr>" +
-    "</thead><tbody>" + linhas + "</tbody></table>" +
+    "<table><thead><tr>" +
+    cabecalhoOrdenavel(COLUNAS_EVENTOS, ordEventos, "ordenarEventosPor") +
+    "<th>Documento</th></tr></thead><tbody>" + linhas + "</tbody></table>" +
     (lista.length > 500 ? "<p class='nota'>Mostrando 500 de " + lista.length +
      "; use a busca pra refinar.</p>" : "");
 }
