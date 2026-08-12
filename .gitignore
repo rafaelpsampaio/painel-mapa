@@ -15,6 +15,7 @@ documentos/
 relatorio_*.txt
 painel.ico
 cache_pdf.json
+cache_emails.json
 
 # python
 __pycache__/
