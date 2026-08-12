@@ -59,7 +59,7 @@ PARTE 4: MANUTENCOES OCASIONAIS
 
 MAPA DOS ARQUIVOS (referencia rapida)
   painel.py / painel.html ....... servidor e interface
-  eventos.py ..................... modelo central de eventos de pagamento
+  eventos.py .................... modelo central de eventos de pagamento
   rotina_pendencias.py .......... leitura da caixa e conciliacao
   cruzar_pagamentos.py .......... cruzamento laudo x pagamento
   ler_repasses.py ............... leitura dos demonstrativos

@@ -71,7 +71,7 @@ SEGURANCA
 
 PARA QUEM MANTEM (arquivos)
   painel.py / painel.html ... servidor e pagina do painel
-  eventos.py ................. modelo central de eventos de pagamento
+  eventos.py ................ modelo central de eventos de pagamento
   rotina_pendencias.py ...... motor da conciliacao (tambem roda
                               sozinho: py rotina_pendencias.py)
   outlook_auth.py ........... login e renovacao do acesso
