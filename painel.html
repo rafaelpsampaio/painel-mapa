@@ -363,6 +363,13 @@ function dataBr(iso) {
   const d = new Date(iso);
   return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit"});
 }
+function dataBrAno(iso) {
+  if (!iso) return "";
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + "/" + m[2] + "/" + m[1].slice(2);  // data pura: sem conversao de fuso
+  const d = new Date(iso);
+  return d.toLocaleDateString("pt-BR", {day:"2-digit", month:"2-digit", year:"2-digit"});
+}
 function brl(v) {
   if (v == null) return "";
   return v.toLocaleString("pt-BR", {style: "currency", currency: "BRL"});
@@ -1003,10 +1010,10 @@ function renderSemPagamento() {
     const cob = rec && rec.cobertura && rec.cobertura[c.exame];
     const detalhe = "<div class='corpo'><p class='nota'>Fonte: " +
       esc(c.fonte) + (cob ? " · Pagamentos deste exame cobrem " +
-      dataBr(cob.inicio) + " a " + dataBr(cob.fim) : "") + "</p>" +
+      dataBrAno(cob.inicio) + " a " + dataBrAno(cob.fim) : "") + "</p>" +
       (c.codigo ? "<button onclick=\"darBaixa('" + esc(c.codigo) +
        "')\">Dar baixa</button>" : "") + "</div>";
-    return "<details><summary><span class='doc-data'>" + esc(dataBr(c.data)) +
+    return "<details><summary><span class='doc-data'>" + esc(dataBrAno(c.data)) +
       "</span><span class='doc-tipo'>" + esc(c.paciente) + "</span>" +
       "<span>" + esc(c.exame) + "</span>" + badge + "</summary>" + detalhe +
       "</details>";
@@ -1031,7 +1038,7 @@ function renderCardsRecebimentos() {
   const t = rec.totais;
   let h = cardRec("Total recebido", brl(t.valor), null,
                   "mostrarEventos('Todos os eventos', function(e){return true})");
-  h += cardRec("Exames pagos", t.exames, null,
+  h += cardRec("Exames pagos/faturados", t.exames, null,
                "mostrarEventos('Exames pagos', function(e){return e.exame !== 'Consulta'})");
   h += cardRec("Consultas", t.consultas, null,
                "mostrarEventos('Consultas', function(e){return e.exame === 'Consulta'})");
@@ -1080,7 +1087,7 @@ function renderEventosFiltrados() {
     !busca || normJs(e.paciente).includes(busca));
   const linhas = lista.slice(0, 500).map(e =>
     "<tr><td>" + esc(e.paciente) + "</td><td>" + esc(e.exame) + "</td>" +
-    "<td>" + esc(dataBr(e.data)) + "</td><td>" + esc(e.pagador) +
+    "<td>" + esc(dataBrAno(e.data)) + "</td><td>" + esc(e.pagador) +
     (e.convenio ? " · " + esc(e.convenio) : "") + "</td>" +
     "<td class='num'>" + (e.valor != null ? brl(e.valor)
       : (e.tipo === "faturado" ? "faturado" : "sem valor")) + "</td>" +
@@ -1110,7 +1117,7 @@ function renderDocumentosFin() {
         const r = resumoDocumentoFin(doc);
         return "<details><summary>" +
           "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
-          "<span class='doc-tipo'>" + esc(TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
+          "<span class='doc-tipo'>" + esc(doc.tipo_amigavel || TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
           "<span class='doc-num'>" + r.qtd + " itens" +
           (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
           "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
