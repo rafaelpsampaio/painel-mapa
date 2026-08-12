@@ -103,7 +103,7 @@ def anotar_pagamentos(dados):
         # so faz sentido cobrar pagamento de exame ja laudado; a janela
         # usada e a do pagador responsavel pela fonte do exame
         if ("_dt" in ex and not ex.get("pagamento")
-                and ex.get("retornado_em")):
+                and ex.get("retornado_em") and not ex.get("baixa")):
             pagador = PAGADOR_PRIMARIO.get(ex["empresa"])
             c = cobertura.get(pagador) if pagador else None
             if c and c[0] <= ex["_dt"] <= c[1]:

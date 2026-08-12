@@ -401,6 +401,8 @@ def analisar(dias=30, token=None):
                           else ex["dias_espera"] >= DIAS_SEM_PRAZO)
         if codigo in codigos_enviados:
             ex["retornado_em"] = codigos_enviados[codigo]
+            if codigo in baixas:
+                ex["baixa"] = baixas[codigo]
             retornados.append(ex)
             continue
         if codigo in baixas:

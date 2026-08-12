@@ -567,6 +567,7 @@ async function darBaixa(codigo) {
   });
   const resp = await r.json();
   if (!resp.ok) { alert("Não deu certo: " + (resp.erro || "?")); return; }
+  let achado = false;
   for (const lista of ["pendentes", "provaveis", "avisos"]) {
     const i = dados[lista].findIndex(e => e.codigo === codigo);
     if (i >= 0) {
@@ -575,8 +576,15 @@ async function darBaixa(codigo) {
       dados.baixados.push(ex);
       dados.contagens[lista] -= 1;
       dados.contagens.baixados += 1;
+      achado = true;
       break;
     }
+  }
+  if (!achado) {
+    // exame ja retornado (laudo enviado): so anota a baixa no lugar, sem
+    // mover de lista, pra sumir de "Sem pagamento identificado"
+    const ex = (dados.retornados || []).find(e => e.codigo === codigo);
+    if (ex) ex.baixa = codigo + ": " + (motivo || "sem motivo informado");
   }
   render();
 }
@@ -1050,7 +1058,7 @@ function casosSemPagamento() {
   // casos do MAPA vindos do email (ja carregados em `dados`)
   if (dados) {
     for (const ex of todosExames()) {
-      if (!ex.pagamento_esperado || ex.pagamento) continue;
+      if (!ex.pagamento_esperado || ex.pagamento || ex.baixa) continue;
       casos.push({paciente: ex.nome || "(sem nome)", exame: "MAPA",
                   data: (ex.recebido || "").slice(0, 10),
                   fonte: "Email (" + ex.codigo + ")", forca: "forte",

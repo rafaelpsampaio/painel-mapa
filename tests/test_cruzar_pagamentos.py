@@ -53,3 +53,22 @@ def test_anotar_pagamentos_orfao(monkeypatch):
     orfaos = cp.anotar_pagamentos(dados)
     assert len(orfaos) == 1
     assert orfaos[0]["nome"] == "Sem Par Nenhum"
+
+
+def test_anotar_pagamentos_baixa_nao_marca_esperado(monkeypatch):
+    """Exame retornado com baixa nao deve ficar pagamento_esperado mesmo
+    dentro da janela de cobertura do pagador; o irmao sem baixa, na mesma
+    janela, deve ser marcado normalmente."""
+    evs = [{"pagador": "IDS", "exame": "MAPA", "paciente": "Sem Par Nenhum",
+            "data": "2026-03-12", "valor": 45.0, "convenio": None,
+            "tipo": "pago", "documento": "ids.pdf"}]
+    monkeypatch.setattr(cp, "coletar_eventos", lambda pastas=None: evs)
+    com_baixa = _exame("D111", "FULANO BAIXADO", "2026-03-12T00:00:00Z",
+                        empresa="IDS")
+    com_baixa["baixa"] = "D111: resolvido fora do email"
+    sem_baixa = _exame("D222", "CICLANO PENDENTE", "2026-03-12T00:00:00Z",
+                        empresa="IDS")
+    dados = _dados([com_baixa, sem_baixa])
+    cp.anotar_pagamentos(dados)
+    assert "pagamento_esperado" not in com_baixa
+    assert sem_baixa.get("pagamento_esperado") is True
