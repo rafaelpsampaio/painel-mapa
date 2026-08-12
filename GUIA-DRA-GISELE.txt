@@ -75,14 +75,19 @@ PARA DAR BAIXA EM UM EXAME
   3. Escreva o motivo e confirme. Ele sai da lista de pendentes.
 
 PARA VER OS PAGAMENTOS
-  Aba "Financeiro": um resumo por empresa (IDS, Unimed, CardioPro)
-  no topo, e embaixo a lista de documentos recebidos, do mais
-  recente pro mais antigo. Clique num documento pra abrir o
-  detalhamento dele. Quando chegar o demonstrativo novo por email,
-  ele entra sozinho na proxima vez que o painel abrir.
-  Documento que NAO veio por email: salve o arquivo na pasta local
-  de documentos (configurada no alto da aba Importacoes) e clique em
-  Atualizar; o painel le de la tambem.
+  Aba "Financeiro": cartoes com o total recebido, exames e consultas,
+  e um cartao por pagador (IDS, Unimed, CardioPro). Abaixo, o grafico
+  mes a mes e a tabela por tipo de exame. CLIQUE EM QUALQUER NUMERO
+  para ver a lista de pacientes por tras dele.
+  O bloco "Sem pagamento identificado" mostra exames feitos que nao
+  apareceram em nenhum pagamento: os marcados "Periodo ja pago e nao
+  veio" merecem cobranca; "Aguardando faturamento" costuma ser so
+  atraso do convenio.
+
+OS DOIS BOTOES DE ATUALIZAR
+  "Atualizar email" ..... le a caixa de email (demora ~1 minuto).
+  "Documentos" .......... rele so as pastas de documentos (rapido).
+                          Use depois de salvar um arquivo na pasta.
 
 PARA VER SE UM ARQUIVO FOI RECONHECIDO
   Aba "Importacoes": lista todo arquivo que o painel achou, tanto na

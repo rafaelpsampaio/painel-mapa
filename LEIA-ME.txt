@@ -22,7 +22,8 @@ USO NO DIA A DIA
   - Duplo clique em "Painel MAPA" (area de trabalho). O painel abre
     no navegador, SEM janela preta; a leitura da caixa leva cerca de
     um minuto.
-  - A atualizacao acontece ao abrir e no botao "Atualizar" do painel.
+  - A atualizacao acontece ao abrir e nos botoes "Atualizar email"
+    (leitura da caixa) e "Documentos" (pasta local) do painel.
   - Para fechar de vez, use o botao "Encerrar" no topo do painel
     (fechar so a aba do navegador deixa o programa rodando quieto ao
     fundo, sem fazer nada; nao tem problema).
@@ -70,6 +71,7 @@ SEGURANCA
 
 PARA QUEM MANTEM (arquivos)
   painel.py / painel.html ... servidor e pagina do painel
+  eventos.py ............... modelo central de eventos de pagamento
   rotina_pendencias.py ...... motor da conciliacao (tambem roda
                               sozinho: py rotina_pendencias.py)
   outlook_auth.py ........... login e renovacao do acesso
