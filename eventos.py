@@ -398,8 +398,8 @@ def recebimentos(pastas=None, data_de=None, data_ate=None):
     opcional), aplicado antes de qualquer agregacao."""
     from datetime import datetime as _dt
     import ler_repasses as lr
-    evs = coletar_eventos(pastas)
-    evs = [e for e in evs if _dentro_do_periodo(e["data"], data_de, data_ate)]
+    evs_todos = coletar_eventos(pastas)
+    evs = [e for e in evs_todos if _dentro_do_periodo(e["data"], data_de, data_ate)]
 
     por_pagador = {}
     por_exame = {}
@@ -441,8 +441,10 @@ def recebimentos(pastas=None, data_de=None, data_ate=None):
         c[1] = max(c[1], evd["data"])
 
     # sem pagamento: realizado laudado sem evento casado
+    # indice usa TODOS os eventos (nao so os do periodo filtrado), pra nao
+    # perder um pagamento genuino que caiu poucos dias fora da janela
     indice = {}
-    for evd in evs:
+    for evd in evs_todos:
         tokens = rp.normalizar(evd["paciente"]).split()
         if tokens and evd["data"]:
             indice.setdefault((evd["exame"], tokens[0]), []).append(evd)

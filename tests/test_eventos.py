@@ -229,6 +229,26 @@ def test_sem_pagamento_forte_e_fraca(monkeypatch):
     assert r["sem_pagamento"][0]["paciente"] == "Pedro Alves"  # forte primeiro
 
 
+def test_sem_pagamento_casa_com_pagamento_fora_da_janela_filtrada(monkeypatch):
+    """Pagamento casado que caiu poucos dias fora do intervalo filtrado
+    (mas dentro da tolerancia de +-10 dias do casamento) ainda deve
+    "casar" com o exame realizado dentro da janela: o indice de
+    casamento usa TODOS os eventos, nao so os do periodo filtrado."""
+    evs = [_ev(paciente="Maria Souza", exame="Teste Ergométrico",
+               data="2026-03-20")]  # fora da janela filtrada (data_ate)
+    realizados = [
+        {"paciente": "Maria Souza", "setor": "TESTE ERGOMETRICO",
+         "data": "2026-03-14", "assinado": "Sim"},  # dentro da janela filtrada
+    ]
+    monkeypatch.setattr(ev, "coletar_eventos", lambda pastas=None: evs)
+    monkeypatch.setattr(ev, "_exames_realizados",
+                        lambda pastas=None: realizados)
+    import ler_repasses as lr
+    monkeypatch.setattr(lr, "financeiro", lambda pastas=None: {"empresas": {}})
+    r = ev.recebimentos(data_de="2026-03-01", data_ate="2026-03-15")
+    assert r["sem_pagamento"] == []
+
+
 def test_recebimentos_filtra_por_data_de_ate(monkeypatch):
     evs = [
         _ev(paciente="Ana", data="2026-01-10"),
