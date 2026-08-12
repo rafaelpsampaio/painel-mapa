@@ -542,8 +542,14 @@ async function exportarExcel(tabela) {
 async function carregar() {
   const btn = document.getElementById("btn-atualizar");
   const btnDocs = document.getElementById("btn-atualizar-docs");
+  const periodoPreset = document.getElementById("periodo-preset");
+  const periodoDe = document.getElementById("periodo-de");
+  const periodoAte = document.getElementById("periodo-ate");
   btn.disabled = true;
   btnDocs.disabled = true;
+  periodoPreset.disabled = true;
+  periodoDe.disabled = true;
+  periodoAte.disabled = true;
   mostrar("carregando");
   document.getElementById("carregando-status").innerHTML = "&nbsp;";
   try {
@@ -564,7 +570,7 @@ async function carregar() {
     }
     dados = d;
     render();
-    carregarRecebimentos();
+    carregarRecebimentos(periodo);
     carregarImportacoes();
     mostrar("conteudo");
   } catch (e) {
@@ -578,6 +584,9 @@ async function carregar() {
   } finally {
     btn.disabled = false;
     btnDocs.disabled = false;
+    periodoPreset.disabled = false;
+    periodoDe.disabled = false;
+    periodoAte.disabled = false;
   }
 }
 
@@ -1073,9 +1082,9 @@ let rec = null;            // JSON de /api/recebimentos
 let eventosVisiveis = [];  // eventos do drill-down aberto
 let vistaMes = "pagador";
 
-async function carregarRecebimentos() {
+async function carregarRecebimentos(periodo) {
+  periodo = periodo || periodoAtivo();
   try {
-    const periodo = periodoAtivo();
     const qs = new URLSearchParams();
     if (periodo.de) qs.set("de", periodo.de);
     if (periodo.ate) qs.set("ate", periodo.ate);
