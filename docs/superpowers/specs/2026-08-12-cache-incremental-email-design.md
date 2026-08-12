@@ -1,4 +1,4 @@
-# Cache incremental de leitura de email — design
+# Cache incremental de leitura de email: design
 
 ## Objetivo
 
@@ -14,13 +14,13 @@ Este design introduz um cache local persistente das mensagens dessas 5
 pastas, com uma primeira leitura completa cobrindo 2 anos (rodando sozinha,
 em segundo plano, de forma resumível) e sincronizações incrementais rápidas
 a partir daí. A lógica de conciliação (extração de código/nome, matching,
-status, buracos de numeração) não muda — só deixa de depender de uma
+status, buracos de numeração) não muda, só deixa de depender de uma
 chamada de rede a cada execução.
 
 **Fora de escopo:** o fluxo de repasses/financeiro (`baixar_repasses.py` +
 `ler_repasses.py`/`eventos.py`) já baixa arquivos localmente e não sofre
 desse problema; não é tocado aqui. Filtro de data para exibição nas telas
-fica para o sub-projeto de filtros/ordenação de tabelas — este design só
+fica para o sub-projeto de filtros/ordenação de tabelas: este design só
 garante que os dados dos últimos 2 anos estejam sempre disponíveis
 localmente; o que a tela mostra por padrão é decisão de outro momento.
 
@@ -55,7 +55,7 @@ Novo arquivo `cache_emails.json` na raiz do projeto (mesmo padrão de
 ```
 
 Guardamos os campos quase-crus da mensagem (assunto, remetente, data,
-anexos, corpo em texto plano — mesma limpeza que `texto_plano()` já faz),
+anexos, corpo em texto plano, mesma limpeza que `texto_plano()` já faz),
 **não** o código/nome já extraídos. Assim, se uma regex de extração
 (`RE_CODIGO`, `RE_NOME`, etc.) for ajustada no futuro, o histórico inteiro
 se beneficia na próxima leitura, sem precisar reler nada do Outlook. Para
@@ -82,7 +82,7 @@ conciliação que já existe hoje, inalterada.
   (queda de internet, PC desligado) perde no máximo o bloco em andamento;
   a próxima abertura retoma dali, não do zero.
 - Token renovado (`outlook_auth.get_access_token()`) a cada poucos blocos,
-  já que o backfill completo (2 anos × 5 pastas) pode passar de 1h — mais
+  já que o backfill completo (2 anos × 5 pastas) pode passar de 1h, mais
   que a validade de um access token.
 - Chamadas ao Graph ganham retry com espera em HTTP 429 (throttling),
   respeitando o header `Retry-After` quando presente. Hoje `gget()` não
@@ -97,7 +97,7 @@ conciliação que já existe hoje, inalterada.
   de 1 dia para mensagens que o Graph demora a indexar), faz upsert por id
   de mensagem no cache, atualiza `ultimo_sync`.
 - Rápida (tipicamente zero a poucas dezenas de mensagens novas), continua
-  acontecendo automaticamente a cada abertura, sem botão separado — mantém
+  acontecendo automaticamente a cada abertura, sem botão separado: mantém
   o comportamento atual de "sempre atualizado".
 - `baixar_repasses.varrer()` não muda.
 
@@ -111,7 +111,7 @@ conciliação que já existe hoje, inalterada.
   vez) é tratado como "nenhuma pasta sincronizada" → dispara backfill
   completo, sem tratamento especial de erro.
 - Forçar recomeço do zero (ex.: ampliar a janela de 2 para 3 anos no
-  futuro) é feito apagando `cache_emails.json` manualmente — mesmo
+  futuro) é feito apagando `cache_emails.json` manualmente, mesmo
   espírito de `baixas.txt`/`config.json` hoje; não precisa de botão
   dedicado na interface.
 
@@ -138,18 +138,19 @@ conciliação que já existe hoje, inalterada.
 ## Testes
 
 Seguindo o padrão já usado no projeto (`pytest` + `monkeypatch`, sem
-chamada de rede real — ver `tests/test_eventos.py`):
+chamada de rede real, ver `tests/test_eventos.py`):
 
 - `cache_email.py`: upsert incremental correto por id de mensagem;
   backfill resume do checkpoint certo após interrupção simulada (bloco
   parcialmente processado); escrita atômica não perde dados se simulada
   uma falha no meio da gravação; retry/backoff em 429.
 - `rotina_pendencias.analisar()`: refatorado para receber as mensagens já
-  sincronizadas (do cache) em vez de buscar do Graph diretamente — mantém
-  os testes de lógica de conciliação (código/nome/status/buracos) rodando
-  sem rede.
-- `test_painel_api.py`: ajusta o teste de `/api/dados` para o novo
-  contrato (sem `dias` controlando a busca).
+  sincronizadas (do cache) em vez de buscar do Graph diretamente. Mantém
+  a lógica de conciliação (código/nome/status/buracos) testável sem rede;
+  hoje não existe `tests/test_rotina_pendencias.py`, então esses testes
+  são novos, não um ajuste de teste existente.
+- `/api/dados` (`painel.py`): não tem teste automatizado hoje (exige
+  token real); verificação continua manual, como já é o caso.
 
 ## Fora de escopo
 
@@ -157,7 +158,7 @@ chamada de rede real — ver `tests/test_eventos.py`):
 - Filtro de exibição por data nas telas (sub-projeto separado).
 - Detecção de mensagens movidas entre pastas monitoradas ou apagadas da
   caixa: uma mensagem já sincronizada permanece no cache mesmo se movida
-  ou apagada depois — consistente com o cache ser aditivo e com o painel
+  ou apagada depois, consistente com o cache ser aditivo e com o painel
   já ser somente leitura hoje. Não é um problema real neste fluxo: o
   código-fonte já documenta que a única movimentação esperada é
   Inbox → MAPA após resposta, e ambas já são pastas monitoradas, então a
