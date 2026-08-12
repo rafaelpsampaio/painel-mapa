@@ -252,6 +252,25 @@ def processar_listagem_exames(caminho):
 
 
 # ------------------------------------------ IDS Relatorio de Repasses
+MESES_PT = {
+    "jan": "01", "fev": "02", "mar": "03", "abr": "04", "mai": "05",
+    "jun": "06", "jul": "07", "ago": "08", "set": "09", "out": "10",
+    "nov": "11", "dez": "12",
+}
+
+
+def _data_extenso_br(data_extenso):
+    """'22 out 2025' -> '22/10/2025'; formato desconhecido volta como veio."""
+    m = re.match(r"(\d{1,2})\s+(\w{3})\s+(\d{4})", data_extenso)
+    if not m:
+        return data_extenso
+    dia, mes_abrev, ano = m.groups()
+    mes = MESES_PT.get(mes_abrev.lower())
+    if not mes:
+        return data_extenso
+    return f"{int(dia):02d}/{mes}/{ano}"
+
+
 PROCEDIMENTOS_RELATORIO = (
     "TESTE ERGOMETRICO MIBI",
     "LAUDO STRESS FARMACOLOGICO",
@@ -281,7 +300,7 @@ def processar_relatorio_repasses(caminho):
         resumo["periodo"] = f"{m.group(1)} a {m.group(2)}"
     m = re.search(r"Impresso em\s*:\s*(\d{1,2} \w{3} \d{4})", txt)
     if m:
-        resumo["emitido_em"] = m.group(1)
+        resumo["emitido_em"] = _data_extenso_br(m.group(1))
     for linha in txt.splitlines():
         m = LINHA_RELATORIO_RE.match(linha.strip())
         if not m:
@@ -436,6 +455,7 @@ def financeiro(pastas=None):
             emp = empresas.setdefault("IDS", {"documentos": []})
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS[r["tipo"]],
                 "emitido_em": r.get("emitido_em"),
                 "linhas": [{"tipo": s["setor"].title(),
                             "detalhe": s["unidade"].title(),
@@ -444,11 +464,12 @@ def financeiro(pastas=None):
                 "total": r.get("total"),
             })
         elif r["tipo"] == "IDS - Listagem de Exames/Laudos":
-            pass  # coberto pela aba "Por fornecedor" (/api/realizados_fornecedor)
+            pass  # coberto por eventos._exames_realizados (bloco "Sem pagamento identificado")
         elif r["tipo"].startswith("Unimed"):
             emp = empresas.setdefault("Unimed", {"documentos": []})
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS[r["tipo"]],
                 "periodo": r.get("periodo"),
                 "linhas": [{"tipo": t, "qtd": n, "valor": None}
                            for t, n in r["servicos"].items()],
@@ -465,6 +486,7 @@ def financeiro(pastas=None):
                 p["valor"] += it["valor"]
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS[r["tipo"]],
                 "emitido_em": r.get("emitido_em"),
                 "periodo": r.get("periodo"),
                 "linhas": [{"tipo": proc.title(), "qtd": p["qtd"],
@@ -478,6 +500,7 @@ def financeiro(pastas=None):
             tot_mapa = sum(m["mapa"] for m in r["meses"])
             emp["documentos"].append({
                 "arquivo": r["arquivo"],
+                "tipo_amigavel": NOMES_AMIGAVEIS[r["tipo"]],
                 "meses": r["meses"],
                 "linhas": [{"tipo": "ECG", "qtd": tot_ecg, "valor": None},
                            {"tipo": "MAPA", "qtd": tot_mapa, "valor": None}],

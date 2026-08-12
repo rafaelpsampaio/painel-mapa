@@ -301,7 +301,7 @@ def test_financeiro_relatorio_repasses():
             break
     assert doc_relatorio is not None, "documento do relatorio nao encontrado em IDS"
     assert doc_relatorio["total"] == {"qtd": 17, "valor": 1680.11}
-    assert doc_relatorio["emitido_em"] == "22 out 2025"
+    assert doc_relatorio["emitido_em"] == "22/10/2025"
     assert doc_relatorio["periodo"] == "01/01/2025 a 31/05/2025"
     # Verifica que as linhas agregam 17 procedimentos
     total_qtd = sum(linha["qtd"] for linha in doc_relatorio["linhas"])
