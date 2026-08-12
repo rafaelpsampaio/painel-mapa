@@ -26,7 +26,7 @@ def _valor_celula(bruto, tipo):
         try:
             return float(bruto)
         except (TypeError, ValueError):
-            return None
+            return str(bruto)
     if tipo == "data":
         try:
             return datetime.fromisoformat(

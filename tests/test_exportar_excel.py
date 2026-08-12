@@ -42,6 +42,18 @@ def test_gerar_coluna_numero_vira_float_de_verdade():
     assert isinstance(valor, float)
 
 
+def test_gerar_coluna_numero_invalido_preserva_valor_como_texto():
+    payload = {
+        "titulo": "Por exame",
+        "colunas": [{"chave": "valor", "rotulo": "Valor", "tipo": "numero"}],
+        "linhas": [{"valor": "nao é um número"}],
+    }
+    conteudo, _ = ee.gerar(payload)
+    wb = openpyxl.load_workbook(io.BytesIO(conteudo))
+    valor = wb.active.cell(row=2, column=1).value
+    assert valor == "nao é um número"
+
+
 def test_gerar_coluna_data_vira_data_de_verdade():
     payload = {
         "titulo": "Eventos",
