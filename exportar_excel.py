@@ -30,7 +30,7 @@ def _valor_celula(bruto, tipo):
     if tipo == "data":
         try:
             return datetime.fromisoformat(
-                str(bruto).replace("Z", "+00:00")).replace(tzinfo=None)
+                str(bruto).replace("Z", "+00:00")).astimezone().replace(tzinfo=None)
         except ValueError:
             return str(bruto)
     return str(bruto)

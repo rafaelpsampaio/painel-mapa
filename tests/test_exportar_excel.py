@@ -63,8 +63,27 @@ def test_gerar_coluna_data_vira_data_de_verdade():
     conteudo, _ = ee.gerar(payload)
     wb = openpyxl.load_workbook(io.BytesIO(conteudo))
     celula = wb.active.cell(row=2, column=1)
-    assert celula.value == datetime(2026, 8, 1, 10, 0, 0)
+    # o valor bruto e UTC; a celula exportada mostra o horario local (o
+    # mesmo convertido pra tela), nao o horario UTC cru
+    esperado = datetime.fromisoformat("2026-08-01T10:00:00+00:00") \
+        .astimezone().replace(tzinfo=None)
+    assert celula.value == esperado
     assert celula.number_format == "DD/MM/YYYY"
+
+
+def test_gerar_coluna_data_converte_utc_para_local_antes_de_exportar():
+    """Timestamp UTC de fim de noite em Brasilia (ex.: laudo enviado as
+    22h) cai no dia seguinte em UTC; a celula exportada deve mostrar a
+    data local (a mesma que aparece na tela), nao a data UTC crua."""
+    payload = {
+        "titulo": "Eventos",
+        "colunas": [{"chave": "recebido", "rotulo": "Recebido", "tipo": "data"}],
+        "linhas": [{"recebido": "2026-08-02T01:00:00Z"}],
+    }
+    conteudo, _ = ee.gerar(payload)
+    wb = openpyxl.load_workbook(io.BytesIO(conteudo))
+    celula = wb.active.cell(row=2, column=1)
+    assert celula.value.date() == datetime(2026, 8, 1).date()
 
 
 def test_gerar_valor_ausente_vira_celula_vazia():
