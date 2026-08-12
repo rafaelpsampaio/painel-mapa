@@ -666,10 +666,10 @@ const ROTULOS = {atrasado: "Atrasado", no_prazo: "Aguardando prazo",
   provavel: "Conferir", aviso: "Conferir", retornado: "Laudo enviado",
   baixado: "Baixado"};
 
-function todosExames() {
+function todosExamesDe(d) {
   const out = [];
   const add = (lista, status) =>
-    (dados[lista] || []).forEach(e => out.push({...e, status}));
+    (d[lista] || []).forEach(e => out.push({...e, status}));
   add("pendentes", "pendente");
   add("provaveis", "provavel");
   add("avisos", "aviso");
@@ -680,6 +680,29 @@ function todosExames() {
   });
   out.sort((a, b) => (b.recebido || "").localeCompare(a.recebido || ""));
   return out;
+}
+function todosExames() {
+  return todosExamesDe(dados);
+}
+
+let dadosTodos = null;    // /api/dados sem filtro de periodo, sob demanda pra busca
+let buscandoTodos = false;
+
+async function onBuscaExames() {
+  renderExames();
+  const busca = document.getElementById("f-busca").value.trim();
+  if (!busca || dadosTodos || buscandoTodos) return;
+  buscandoTodos = true;
+  try {
+    const r = await fetch("/api/dados");
+    const d = await r.json();
+    if (!d.sincronizando && !d.precisa_login && !d.erro) dadosTodos = d;
+  } catch (e) {
+    // busca continua restrita ao periodo filtrado se isso falhar
+  } finally {
+    buscandoTodos = false;
+  }
+  renderExames();
 }
 
 const COLUNAS_EXAMES = [
@@ -703,7 +726,7 @@ function listaExamesFiltrada() {
   const emp = document.getElementById("f-empresa").value;
   const st = document.getElementById("f-status").value;
   const pg = document.getElementById("f-pag").value;
-  let lista = todosExames();
+  let lista = (busca && dadosTodos) ? todosExamesDe(dadosTodos) : todosExames();
   if (emp) lista = lista.filter(e => e.empresa === emp);
   if (st) lista = lista.filter(e => e.status === st);
   if (pg === "pago") lista = lista.filter(e => e.pagamento);
@@ -721,8 +744,11 @@ function renderExames() {
   lista = ordenarLista(lista, ordExames.campo, ordExames.direcao,
     tipoDaColuna(COLUNAS_EXAMES, ordExames.campo));
 
+  const busca = document.getElementById("f-busca").value.trim();
   document.getElementById("f-contagem").textContent =
-    num(lista.length) + " exame" + (lista.length === 1 ? "" : "s");
+    num(lista.length) + " exame" + (lista.length === 1 ? "" : "s") +
+    (busca && dadosTodos ? " · buscando em todos os períodos"
+      : busca && buscandoTodos ? " · buscando em todos os períodos…" : "");
 
   const LIMITE = 800;
   const corte = lista.length > LIMITE;
@@ -930,7 +956,8 @@ function render() {
   if (rec) renderSemPagamento();
 }
 
-for (const id of ["f-busca", "f-empresa", "f-status", "f-pag"]) {
+document.getElementById("f-busca").addEventListener("input", onBuscaExames);
+for (const id of ["f-empresa", "f-status", "f-pag"]) {
   document.getElementById(id).addEventListener("input", renderExames);
 }
 
