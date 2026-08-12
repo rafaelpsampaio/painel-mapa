@@ -139,55 +139,6 @@
   .segmentado button.ativa { background: var(--cor-superficie); color: var(--cor-texto);
     font-weight: 600; }
 
-  .grade-meses-fin { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 12px; }
-  .mes-card-fin { border: 1px solid var(--cor-borda); border-radius: var(--raio);
-    padding: 14px 16px; }
-  .mes-card-fin h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em;
-    color: var(--cor-texto-fraco); font-weight: 700; margin: 0 0 12px; }
-  .funil-linha { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .funil-rot { width: 74px; font-size: 12px; color: var(--cor-texto-fraco); flex-shrink: 0; }
-  .funil-trilho { flex: 1; background: var(--cor-fundo); border-radius: 3px; height: 14px;
-    position: relative; overflow: hidden; }
-  .funil-barra { display: block; height: 100%; border-radius: 3px; }
-  .funil-num { width: 40px; text-align: right; font-size: 12.5px; font-weight: 600;
-    font-variant-numeric: tabular-nums; flex-shrink: 0; }
-  .divisor { height: 1px; background: var(--cor-borda); margin: 14px 0 12px; }
-  .pago-rot { font-size: 12px; color: var(--cor-texto-fraco); margin-bottom: 6px;
-    display: flex; justify-content: space-between; }
-  .pago-rot b { color: var(--cor-texto); font-variant-numeric: tabular-nums; }
-  .barra-empilhada { display: flex; height: 20px; border-radius: 3px; overflow: hidden;
-    background: var(--cor-fundo); }
-  .seg { height: 100%; cursor: pointer; border-right: 2px solid #fff; }
-  .seg:last-child { border-right: none; }
-  .seg:hover { filter: brightness(1.12); }
-
-  .fornecedor-cabeca { display: flex; flex-wrap: wrap; align-items: center; gap: 14px;
-    margin-bottom: 20px; }
-  .badge-alerta { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px;
-    font-weight: 600; color: var(--cor-erro); background: var(--cor-erro-fundo);
-    padding: 5px 10px; border-radius: var(--raio-pequeno); }
-  .badge-alerta::before { content: "!"; display: inline-flex; align-items: center;
-    justify-content: center; width: 15px; height: 15px; border-radius: 50%;
-    background: var(--cor-erro); color: var(--cor-texto-claro); font-size: 10.5px; font-weight: 800; }
-
-  .grade-donuts { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 18px 10px; text-align: center; }
-  .mes-donut .rot-mes { font-size: 11.5px; color: var(--cor-texto-fraco); font-weight: 600;
-    margin-bottom: 8px; text-transform: uppercase; letter-spacing: .03em; }
-  .mes-donut .donut-wrap { position: relative; width: 104px; height: 104px; margin: 0 auto; }
-  .mes-donut .donut-wrap svg circle.fatia { cursor: pointer; }
-  .mes-donut .donut-wrap svg circle.fatia:hover { filter: brightness(1.15); }
-  .mes-donut .donut-centro { position: absolute; inset: 0; display: flex; flex-direction: column;
-    align-items: center; justify-content: center; pointer-events: none; }
-  .mes-donut .donut-centro b { font-size: 18px; font-variant-numeric: tabular-nums; line-height: 1;
-    color: var(--cor-texto); }
-  .mes-donut .donut-centro small { font-size: 9.5px; color: var(--cor-texto-fraco); margin-top: 2px; }
-  .mes-donut .rot-fornecedor { margin-top: 8px; font-size: 12.5px; font-weight: 700;
-    font-variant-numeric: tabular-nums; }
-  .mes-donut .rot-valor { font-size: 11px; color: var(--cor-texto-fraco);
-    font-variant-numeric: tabular-nums; margin-top: 1px; }
-
   .legenda { display: flex; flex-wrap: wrap; gap: 14px 20px; margin-top: 18px;
     padding-top: 16px; border-top: 1px solid var(--cor-borda); font-size: 12.5px; }
   .legenda span { display: inline-flex; align-items: center; gap: 7px; color: var(--cor-texto-fraco); }
@@ -202,22 +153,12 @@
   .gb-fatia { width: 100%; }
   .gb-rotulo { font-size: 11px; color: var(--cor-texto-fraco); }
 
-  .tooltip-fin { position: fixed; pointer-events: none; background: var(--cor-navy);
-    color: var(--cor-texto-claro); font-size: 12.5px; padding: 7px 11px; border-radius: var(--raio-pequeno);
-    box-shadow: 0 4px 14px rgba(0,0,0,.25); opacity: 0; transform: translateY(4px);
-    transition: opacity .1s, transform .1s; z-index: 20; white-space: nowrap; }
-  .tooltip-fin.on { opacity: 1; transform: translateY(0); }
-  .tooltip-fin .tt-conv { font-weight: 700; }
-  .tooltip-fin .tt-val { opacity: .75; margin-left: 6px; }
-
   .transacoes-cabeca { display: flex; flex-wrap: wrap; align-items: center;
     justify-content: space-between; gap: 10px; margin-bottom: 10px; }
   .transacoes-cabeca h2 { margin: 0; }
   .transacoes-cabeca button { border: 1px solid var(--cor-borda); background: var(--cor-superficie);
     color: var(--cor-texto-fraco); border-radius: var(--raio-pequeno); padding: 6px 12px;
     cursor: pointer; font-family: inherit; font-size: 12.5px; }
-  #transacoes-corpo-fin { overflow-x: auto; }
-  #transacoes-corpo-fin td.muted { color: var(--cor-texto-fraco); font-size: 12px; }
 
   .import-resumo { color: var(--cor-texto-fraco); font-size: 13px; margin: 4px 0 10px; }
   .grade-importacoes { display: flex; flex-direction: column; gap: 8px; }
@@ -233,15 +174,6 @@
   .card-import .ci-resumo { color: var(--cor-texto-fraco); font-size: 12.5px; }
   .card-import .ci-motivo { color: var(--cor-texto-fraco); font-size: 12.5px; flex: 2 1 280px; }
 
-  .grade-fornecedores-fin { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr));
-    gap: 12px; }
-  .resumo-fornecedor-fin { border: 1px solid var(--cor-borda); border-radius: var(--raio);
-    padding: 14px 16px; }
-  .resumo-fornecedor-fin h3 { font-size: 12.5px; text-transform: uppercase; letter-spacing: .03em;
-    color: var(--cor-texto-fraco); font-weight: 700; margin-bottom: 8px; }
-  .resumo-fornecedor-fin .num-grande { font-size: 22px; font-weight: 700;
-    font-variant-numeric: tabular-nums; color: var(--cor-texto); }
-  .resumo-fornecedor-fin .num-sub { font-size: 12px; color: var(--cor-texto-fraco); margin-top: 2px; }
   .doc-fin-lista details { margin-bottom: 6px; }
   .doc-fin-lista summary { display: flex; align-items: center; gap: 12px;
     font-weight: 400; font-size: 13.5px; }
@@ -276,7 +208,6 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
   <button id="aba-btn-geral" class="ativa" onclick="mostraAba('geral')">Visão geral</button>
   <button id="aba-btn-exames" onclick="mostraAba('exames')">Exames</button>
   <button id="aba-btn-financeiro" onclick="mostraAba('financeiro')">Financeiro</button>
-  <button id="aba-btn-analises" onclick="mostraAba('analises')">Análises</button>
   <button id="aba-btn-importacoes" onclick="mostraAba('importacoes')">Importações</button>
 </nav>
 
@@ -383,49 +314,6 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
     <div id="sec-orfaos"></div>
   </div>
 
-  <div id="aba-analises" class="oculto">
-    <section class="bloco">
-      <div class="segmentado">
-        <button id="btn-vista-mes-fin" onclick="mostrarVistaFornecedor('mes')">Por mês</button>
-        <button class="ativa" id="btn-vista-fornecedor-fin" onclick="mostrarVistaFornecedor('fornecedor')">Por fornecedor</button>
-      </div>
-
-      <div id="vista-mes-fin" class="oculto">
-        <h2>Exames por mês, produção e pagamento por convênio</h2>
-        <p class="nota">Realizado (Listagem de Exames/Laudos) &rarr; Laudado (Assinado) &rarr;
-          Pago (casado com o repasse, por convênio). O convênio só é conhecido quando o
-          pagamento casa, então a quebra por fornecedor é só na etapa Pago.</p>
-        <div class="grade-meses-fin" id="grade-meses-fin"><p class="nota">Carregando&hellip;</p></div>
-        <div class="legenda" id="legenda-meses-fin"></div>
-      </div>
-
-      <div id="vista-fornecedor-fin">
-        <h2>Um fornecedor, mês a mês</h2>
-        <p class="nota">Só desse fornecedor: quanto foi pedido, quanto foi laudado aguardando
-          pagamento, e quanto já foi pago. Pedido/laudado são estimados pela participação
-          média do fornecedor nos pagamentos já identificados, já que a Listagem de
-          Exames/Laudos não traz convênio: só descobrimos quem é o fornecedor quando o
-          pagamento casa.</p>
-        <div class="fornecedor-cabeca">
-          <label>Fornecedor
-            <select id="sel-fornecedor-fin" onchange="renderFornecedorFinanceiro()"></select>
-          </label>
-          <span id="badge-fornecedor-fin"></span>
-        </div>
-        <div class="grade-donuts" id="grafico-fornecedor-fin"></div>
-        <div class="legenda" id="legenda-fornecedor-fin"></div>
-      </div>
-    </section>
-
-    <section class="bloco oculto" id="bloco-transacoes-fin">
-      <div class="transacoes-cabeca">
-        <h2 id="transacoes-titulo-fin"></h2>
-        <button onclick="document.getElementById('bloco-transacoes-fin').classList.add('oculto')">Fechar</button>
-      </div>
-      <div id="transacoes-corpo-fin"></div>
-    </section>
-  </div>
-
   <div id="aba-importacoes" class="oculto">
     <section class="bloco">
       <h2>Pasta local</h2>
@@ -456,7 +344,6 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       <div class="grade-importacoes"><p class="nota">Carregando&hellip;</p></div>
     </section>
   </div>
-  <div class="tooltip-fin" id="tooltip-fin"></div>
 
   <p class="rodape">Somente leitura da caixa controlemapa@hotmail.com.
      Baixas manuais ficam registradas no arquivo baixas.txt.</p>
@@ -489,7 +376,7 @@ function mostrar(id) {
     document.getElementById(t).classList.toggle("oculto", t !== id);
 }
 function mostraAba(nome) {
-  for (const a of ["geral", "exames", "financeiro", "analises", "importacoes"]) {
+  for (const a of ["geral", "exames", "financeiro", "importacoes"]) {
     document.getElementById("aba-" + a).classList.toggle("oculto", a !== nome);
     document.getElementById("aba-btn-" + a).classList.toggle("ativa", a === nome);
   }
@@ -868,7 +755,6 @@ async function salvarPasta() {
       "Atualizar para recruzar os dados."
     : "pasta desativada";
   carregarRecebimentos();
-  carregarRealizadosFornecedor();
   carregarImportacoes();
 }
 
@@ -1259,272 +1145,12 @@ async function carregarImportacoes() {
 carregarImportacoes();
 
 const PALETA_FORNECEDOR = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"];
-const COR_OUTROS = "#8f8c81";
-const COR_SEM_LAUDO = "#e8dcc0";
-const CORES_FUNIL = [PALETA_FORNECEDOR[0], "#5598e7", "#86b6ef"];
 const MESES_NOME = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 function formatMes(ym) {
   const [ano, mes] = ym.split("-");
   return MESES_NOME[parseInt(mes, 10) - 1] + "/" + ano.slice(2);
 }
-
-function montarDonutFin(total, fatias, size, largura) {
-  if (!total) {
-    return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size + "'>" +
-      "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + (size - largura) / 2 +
-      "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/></svg>";
-  }
-  const r = (size - largura) / 2;
-  const circ = 2 * Math.PI * r;
-  let acumulado = 0;
-  const arcos = fatias.filter(fa => fa.val > 0).map(fa => {
-    const frac = fa.val / total;
-    const comprimento = frac * circ;
-    const offset = -acumulado;
-    acumulado += comprimento;
-    return "<circle cx='" + size / 2 + "' cy='" + size / 2 + "' r='" + r + "' fill='none' stroke='" +
-      fa.cor + "' stroke-width='" + largura + "' stroke-dasharray='" + comprimento + " " +
-      (circ - comprimento) + "' stroke-dashoffset='" + offset + "' class='fatia' " +
-      "data-nome=\"" + esc(fa.nome) + "\" data-val='" + fa.val + "' data-pct='" +
-      (frac * 100).toFixed(0) + "'" +
-      (fa.valor ? " data-valor=\"" + esc(brl(fa.valor)) + "\"" : "") + "/>";
-  }).join("");
-  return "<svg width='" + size + "' height='" + size + "' viewBox='0 0 " + size + " " + size +
-    "' style='transform:rotate(-90deg)'><circle cx='" + size / 2 + "' cy='" + size / 2 +
-    "' r='" + r + "' fill='none' style='stroke:var(--cor-borda)' stroke-width='" + largura + "'/>" +
-    arcos + "</svg>";
-}
-
-let dadosRealizadosFornecedor = null;
-
-function mostrarVistaFornecedor(nome) {
-  document.getElementById("vista-mes-fin").classList.toggle("oculto", nome !== "mes");
-  document.getElementById("vista-fornecedor-fin").classList.toggle("oculto", nome !== "fornecedor");
-  document.getElementById("btn-vista-mes-fin").classList.toggle("ativa", nome === "mes");
-  document.getElementById("btn-vista-fornecedor-fin").classList.toggle("ativa", nome === "fornecedor");
-}
-
-async function carregarRealizadosFornecedor() {
-  try {
-    dadosRealizadosFornecedor = await (await fetch("/api/realizados_fornecedor")).json();
-  } catch (e) {
-    document.getElementById("grade-meses-fin").innerHTML =
-      "<p class='nota'>Não consegui cruzar exames realizados com pagamentos.</p>";
-    return;
-  }
-  renderMesesFornecedor();
-  const sel = document.getElementById("sel-fornecedor-fin");
-  sel.innerHTML = dadosRealizadosFornecedor.fornecedores.map(f =>
-    "<option value=\"" + esc(f.nome) + "\">" + esc(f.nome) + "</option>").join("");
-  renderFornecedorFinanceiro();
-}
-
-function renderMesesFornecedor() {
-  const d = dadosRealizadosFornecedor;
-  const grade = document.getElementById("grade-meses-fin");
-  if (!d || !d.meses.length) {
-    grade.innerHTML = "<p class='nota'>Nenhum exame na Listagem de Exames/Laudos ainda.</p>";
-    return;
-  }
-  const principais = d.fornecedores.slice(0, 6);
-  const cores = {};
-  principais.forEach((f, i) => { cores[f.nome] = PALETA_FORNECEDOR[i]; });
-
-  grade.innerHTML = d.meses.map(m => {
-    const porNome = m.por_fornecedor;
-    let outrosQtd = 0;
-    Object.keys(porNome).forEach(nome => {
-      if (!cores[nome]) outrosQtd += porNome[nome].qtd;
-    });
-    const fatias = principais
-      .map(f => ({ nome: f.nome, cor: cores[f.nome], val: (porNome[f.nome] || {}).qtd || 0 }))
-      .concat([{ nome: "Outros", cor: COR_OUTROS, val: outrosQtd }]);
-    const barra = fatias.filter(fa => fa.val > 0).map(fa => {
-      const pct = 100 * fa.val / (m.pago_total || 1);
-      return "<div class='seg' data-conv=\"" + esc(fa.nome) + "\" data-val='" + fa.val +
-        "' data-pct='" + pct.toFixed(0) + "' style='width:" + pct + "%;background:" + fa.cor +
-        "'></div>";
-    }).join("");
-    return "<div class='mes-card-fin' data-mes=\"" + m.mes + "\"><h3>" + formatMes(m.mes) + "</h3>" +
-      "<div class='funil-linha'><span class='funil-rot'>Realizados</span>" +
-      "<span class='funil-trilho'><span class='funil-barra' style='width:100%;background:" + CORES_FUNIL[0] + "'></span></span>" +
-      "<span class='funil-num'>" + m.realizados + "</span></div>" +
-      "<div class='funil-linha'><span class='funil-rot'>Laudados</span>" +
-      "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.laudados / m.realizados) + "%;background:" + CORES_FUNIL[1] + "'></span></span>" +
-      "<span class='funil-num'>" + m.laudados + "</span></div>" +
-      "<div class='funil-linha'><span class='funil-rot'>Pagos</span>" +
-      "<span class='funil-trilho'><span class='funil-barra' style='width:" +
-      (100 * m.pago_total / m.realizados) + "%;background:" + CORES_FUNIL[2] + "'></span></span>" +
-      "<span class='funil-num'>" + m.pago_total + "</span></div>" +
-      "<div class='divisor'></div>" +
-      "<div class='pago-rot'><span>Pago por convênio</span><b>" + m.pago_total + " de " +
-      m.laudados + "</b></div>" +
-      "<div class='barra-empilhada'>" + barra + "</div></div>";
-  }).join("");
-
-  document.getElementById("legenda-meses-fin").innerHTML =
-    principais.map(f => "<span><span class='ponto' style='background:" + cores[f.nome] +
-      "'></span>" + esc(f.nome) + "</span>").join("") +
-    "<span><span class='ponto' style='background:" + COR_OUTROS + "'></span>Outros</span>";
-}
-
-function renderFornecedorFinanceiro() {
-  const d = dadosRealizadosFornecedor;
-  const nome = document.getElementById("sel-fornecedor-fin").value;
-  const f = d.fornecedores.find(x => x.nome === nome);
-  if (!f) { document.getElementById("grafico-fornecedor-fin").innerHTML = ""; return; }
-
-  const cor = PALETA_FORNECEDOR[d.fornecedores.indexOf(f) % PALETA_FORNECEDOR.length];
-  const participacao = f.participacao;
-
-  document.getElementById("grafico-fornecedor-fin").innerHTML = d.meses.map(m => {
-    const pago = (m.por_fornecedor[nome] || {}).qtd || 0;
-    const valor = (m.por_fornecedor[nome] || {}).valor || 0;
-    const pedidosEst = Math.round(participacao * m.realizados);
-    const laudadosEst = Math.round(participacao * m.laudados);
-    const soPedido = Math.max(0, pedidosEst - laudadosEst);
-    const laudadoSemPagar = Math.max(0, laudadosEst - pago);
-    const total = Math.max(pedidosEst, soPedido + laudadoSemPagar + pago);
-    const donut = montarDonutFin(total, [
-      { nome: "Pago", cor: cor, val: pago, valor: valor },
-      { nome: "Laudado, aguardando pagamento", cor: COR_OUTROS, val: laudadoSemPagar },
-      { nome: "Só pedido, sem laudo ainda", cor: COR_SEM_LAUDO, val: soPedido },
-    ], 104, 16);
-    return "<div class='mes-donut' data-mes=\"" + m.mes + "\"><div class='rot-mes'>" + formatMes(m.mes) + "</div>" +
-      "<div class='donut-wrap'>" + donut + "<div class='donut-centro'><b>" + total +
-      "</b><small>pedidos (est.)</small></div></div>" +
-      "<div class='rot-fornecedor' style='color:" + cor + "'>" + pago +
-      " pago" + (pago === 1 ? "" : "s") + "</div>" +
-      "<div class='rot-valor'>" + brl(valor) + "</div></div>";
-  }).join("");
-
-  document.getElementById("legenda-fornecedor-fin").innerHTML =
-    "<span><span class='ponto' style='background:" + cor + "'></span>Pago</span>" +
-    "<span><span class='ponto' style='background:" + COR_OUTROS +
-    "'></span>Laudado, aguardando pagamento</span>" +
-    "<span><span class='ponto' style='background:" + COR_SEM_LAUDO +
-    "'></span>Só pedido, sem laudo ainda</span>";
-
-  let ultimoComPagamento = -1;
-  d.meses.forEach((m, i) => { if ((m.por_fornecedor[nome] || {}).qtd) ultimoComPagamento = i; });
-  const mesesSemPagar = d.meses.length - 1 - ultimoComPagamento;
-  const badge = document.getElementById("badge-fornecedor-fin");
-  badge.innerHTML = (ultimoComPagamento >= 0 && mesesSemPagar >= 3)
-    ? "<span class='badge-alerta'>Sem pagamento desde " + formatMes(d.meses[ultimoComPagamento].mes) +
-      " (" + mesesSemPagar + " meses)</span>"
-    : "";
-}
-
-const ttFin = document.getElementById("tooltip-fin");
-document.addEventListener("mouseover", e => {
-  const seg = e.target.closest(".seg");
-  if (seg) {
-    ttFin.innerHTML = "<span class='tt-conv'>" + esc(seg.dataset.conv) + "</span>" +
-      "<span class='tt-val'>" + seg.dataset.val + " exames &middot; " + seg.dataset.pct + "%</span>";
-    ttFin.classList.add("on");
-    return;
-  }
-  const fatia = e.target.closest(".fatia");
-  if (fatia) {
-    ttFin.innerHTML = "<span class='tt-conv'>" + esc(fatia.dataset.nome) + "</span>" +
-      "<span class='tt-val'>" + fatia.dataset.val + " exames &middot; " + fatia.dataset.pct + "%" +
-      (fatia.dataset.valor ? " &middot; " + esc(fatia.dataset.valor) : "") + "</span>";
-    ttFin.classList.add("on");
-  }
-});
-document.addEventListener("mousemove", e => {
-  if (!ttFin.classList.contains("on")) return;
-  ttFin.style.left = (e.clientX + 14) + "px";
-  ttFin.style.top = (e.clientY + 14) + "px";
-});
-document.addEventListener("mouseout", e => {
-  if (e.target.closest(".seg") || e.target.closest(".fatia")) ttFin.classList.remove("on");
-});
-
-function transacoesPara(mes, conv) {
-  const m = dadosRealizadosFornecedor.meses.find(x => x.mes === mes);
-  if (!m) return [];
-  if (conv === "Outros") {
-    const principais = new Set(dadosRealizadosFornecedor.fornecedores.slice(0, 6).map(f => f.nome));
-    let todas = [];
-    Object.keys(m.por_fornecedor).forEach(nome => {
-      if (!principais.has(nome)) todas = todas.concat(m.por_fornecedor[nome].transacoes || []);
-    });
-    return todas;
-  }
-  return (m.por_fornecedor[conv] || {}).transacoes || [];
-}
-
-function mostrarTransacoesFin(mes, conv, transacoes) {
-  const bloco = document.getElementById("bloco-transacoes-fin");
-  const titulo = document.getElementById("transacoes-titulo-fin");
-  const corpo = document.getElementById("transacoes-corpo-fin");
-  titulo.textContent = transacoes.length + " transaç" + (transacoes.length === 1 ? "ão" : "ões") +
-    " · " + conv + " · " + formatMes(mes);
-  if (!transacoes.length) {
-    corpo.innerHTML = "<p class='nota'>Nenhuma transação encontrada.</p>";
-  } else {
-    const linhas = transacoes.slice().sort((a, b) => a.data < b.data ? -1 : 1).map(t =>
-      "<tr><td>" + dataBr(t.data) + "</td><td>" + esc(t.paciente) + "</td><td>" + esc(t.setor) +
-      "</td><td>" + brl(t.valor) + "</td><td>" + dataBr(t.data_pagamento) + "</td>" +
-      "<td class='muted'>" + esc(t.origem) + "</td></tr>").join("");
-    corpo.innerHTML = "<table><tr><th>Data exame</th><th>Paciente</th><th>Setor</th>" +
-      "<th>Valor</th><th>Data pagamento</th><th>Arquivo</th></tr>" + linhas + "</table>";
-  }
-  bloco.classList.remove("oculto");
-  bloco.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-function mostrarExamesEstado(mes, chave, rotulo) {
-  const m = dadosRealizadosFornecedor.meses.find(x => x.mes === mes);
-  const lista = (m && m[chave]) || [];
-  const bloco = document.getElementById("bloco-transacoes-fin");
-  const titulo = document.getElementById("transacoes-titulo-fin");
-  const corpo = document.getElementById("transacoes-corpo-fin");
-  titulo.textContent = lista.length + " exame" + (lista.length === 1 ? "" : "s") +
-    " · " + rotulo + " · " + formatMes(mes);
-  if (!lista.length) {
-    corpo.innerHTML = "<p class='nota'>Nenhum exame nessa situação.</p>";
-  } else {
-    const ordenada = lista.slice().sort((a, b) => a.data < b.data ? -1 : 1);
-    const linhas = ordenada.map(x =>
-      "<tr><td>" + dataBr(x.data) + "</td><td>" + esc(x.paciente) + "</td><td>" + esc(x.setor) +
-      "</td><td>" + (x.esperado ? "<span class='badge-alerta'>fora do prazo esperado</span>" : "") +
-      "</td></tr>").join("");
-    corpo.innerHTML = "<table><tr><th>Data</th><th>Paciente</th><th>Setor</th><th></th></tr>" +
-      linhas + "</table>" +
-      "<p class='nota'>O convênio só é conhecido quando o pagamento casa, então esta lista vale " +
-      "para todos os fornecedores, não é possível filtrar só o selecionado.</p>";
-  }
-  bloco.classList.remove("oculto");
-  bloco.scrollIntoView({ behavior: "smooth", block: "nearest" });
-}
-
-document.addEventListener("click", e => {
-  const seg = e.target.closest(".seg");
-  if (seg) {
-    const mes = seg.closest(".mes-card-fin").dataset.mes;
-    const conv = seg.dataset.conv;
-    mostrarTransacoesFin(mes, conv, transacoesPara(mes, conv));
-    return;
-  }
-  const fatia = e.target.closest(".fatia");
-  if (fatia) {
-    const mes = fatia.closest(".mes-donut").dataset.mes;
-    if (fatia.dataset.nome === "Pago") {
-      const conv = document.getElementById("sel-fornecedor-fin").value;
-      mostrarTransacoesFin(mes, conv, transacoesPara(mes, conv));
-    } else if (fatia.dataset.nome === "Laudado, aguardando pagamento") {
-      mostrarExamesEstado(mes, "laudados_sem_pagamento", "Laudados, aguardando pagamento");
-    } else if (fatia.dataset.nome === "Só pedido, sem laudo ainda") {
-      mostrarExamesEstado(mes, "nao_laudados", "Só pedido, sem laudo ainda");
-    }
-  }
-});
-
-carregarRealizadosFornecedor();
 
 let encerrado = false;
 async function encerrar() {
