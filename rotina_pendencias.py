@@ -19,26 +19,24 @@ Classificacao de cada exame recebido:
  4. AVISO: conversa respondida, mas sem PDF nem nome batendo.
  5. PENDENTE: nada disso.
 
-Somente leitura (Mail.Read). Nada e alterado na caixa.
-O nucleo esta em analisar(); o painel web (painel.py) usa a mesma funcao.
+As mensagens vem do cache local (cache_email.py), que sincroniza com o
+Outlook em segundo plano; este modulo nao faz chamada de rede. O nucleo
+esta em analisar(); o painel web (painel.py) usa a mesma funcao.
 """
 
 import argparse
 import difflib
 import html as htmlmod
-import json
 import os
 import re
 import sys
 import unicodedata
-import urllib.parse
-import urllib.request
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 
+import cache_email
 import outlook_auth
 
-GRAPH = "https://graph.microsoft.com/v1.0"
 # inbox = pendentes; MAPA = arquivadas; UNIMED e IDS tambem recebem exames
 PASTAS_RECEBIDOS = ["inbox", "MAPA", "UNIMED", "IDS"]
 RE_CODIGO = re.compile(r"\b([A-Z0-9]{2,4})[-\s]?(\d{4,6})\b")
@@ -118,52 +116,24 @@ def extrair_prazo(texto, recebido_iso):
     return max(candidatos).strftime("%Y-%m-%d") if candidatos else None
 
 
-# ---------------------------------------------------------------- acesso http
-def gget(token, url):
-    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
-    try:
-        with urllib.request.urlopen(req, timeout=60) as r:
-            return json.load(r)
-    except urllib.error.HTTPError as e:
-        corpo = e.read().decode("utf-8", "replace")[:300]
-        raise RuntimeError(f"Erro HTTP {e.code} ao consultar o email: {corpo}")
-
-
-def listar(token, pasta_id, select, cutoff_iso, campo_data, expand=None):
-    filtro = urllib.parse.quote(f"{campo_data} ge {cutoff_iso}")
-    ordem = urllib.parse.quote(f"{campo_data} desc")
-    params = f"$select={select}&$top=50&$filter={filtro}&$orderby={ordem}"
-    if expand:
-        params += f"&$expand={urllib.parse.quote(expand)}"
-    url = f"{GRAPH}/me/mailFolders/{pasta_id}/messages?{params}"
-    out = []
-    while url:
-        data = gget(token, url)
-        out.extend(data.get("value", []))
-        url = data.get("@odata.nextLink")
-    return out
-
-
 # ------------------------------------------------------------- extracao
-def codigos_de_anexos(msg, extensoes):
+def codigos_de_anexos(nomes_anexos, extensoes):
     """Extrai codigos normalizados (PREFIXO-NUMERO) dos nomes de anexos."""
     achados = []
-    for a in msg.get("attachments", []):
-        nome = (a.get("name") or "").upper()
-        if not any(nome.endswith(e) for e in extensoes):
+    for nome in nomes_anexos:
+        nome_upper = (nome or "").upper()
+        if not any(nome_upper.endswith(e) for e in extensoes):
             continue
-        m = RE_CODIGO.search(nome)
+        m = RE_CODIGO.search(nome_upper)
         if m:
-            achados.append((f"{m.group(1)}-{m.group(2)}", a.get("name")))
+            achados.append((f"{m.group(1)}-{m.group(2)}", nome))
     return achados
 
 
-def texto_plano(msg):
-    corpo = msg.get("body", {}).get("content", "") or ""
-    corpo = re.sub(r"<style.*?</style>", " ", corpo, flags=re.S | re.I)
-    corpo = re.sub(r"<[^>]+>", " ", corpo)
-    corpo = htmlmod.unescape(corpo)
-    return re.sub(r"\s+", " ", (msg.get("subject") or "") + " " + corpo)
+def texto_plano(m):
+    """Assunto + corpo (ja em texto plano no cache) normalizado."""
+    return re.sub(r"\s+", " ", (m.get("assunto") or "") + " " +
+                  (m.get("corpo_texto") or ""))
 
 
 def nome_no_texto(texto, codigo):
@@ -248,17 +218,16 @@ def nomes_nas_respostas(enviados):
     """Candidatos a nome de paciente em anexos e assuntos dos enviados."""
     candidatos = []  # (nome_normalizado, origem, data)
     for m in enviados:
-        data = m["sentDateTime"]
-        for a in m.get("attachments", []):
-            base = re.sub(r"(?i)\.(pdf|dmw|png|jpe?g|docx?)$", "",
-                          a.get("name") or "")
+        data = m["recebido"]
+        for nome_anexo in m.get("anexos", []):
+            base = re.sub(r"(?i)\.(pdf|dmw|png|jpe?g|docx?)$", "", nome_anexo)
             base = RE_CODIGO.sub("", base)
             base = re.sub(r"[_\d]+", " ", base)
             base = re.sub(r"\s+", " ", base).strip(" -_.")
             if len(base.split()) >= 2:
                 candidatos.append(
-                    (normalizar(base), f"anexo '{a.get('name')}'", data))
-        assunto = m.get("subject") or ""
+                    (normalizar(base), f"anexo '{nome_anexo}'", data))
+        assunto = m.get("assunto") or ""
         limpo = re.sub(r"\s+", " ", RE_ASSUNTO_LIXO.sub(" ", assunto)).strip()
         if len(limpo.split()) >= 2:
             candidatos.append(
@@ -311,36 +280,25 @@ def registrar_baixa(codigo, motivo=""):
 
 
 # ------------------------------------------------------------- nucleo
-def analisar(dias=30, token=None):
-    """Varre a caixa e devolve um dicionario com toda a conciliacao."""
+def analisar(cache, dias=30):
+    """Roda a conciliacao sobre as mensagens ja sincronizadas no cache
+    local (cache_email.py). Nao faz nenhuma chamada de rede."""
     agora = datetime.now(timezone.utc)
     cutoff = (agora - timedelta(days=dias)).strftime("%Y-%m-%dT%H:%M:%SZ")
-    if token is None:
-        token = outlook_auth.get_access_token()
-
-    pastas = gget(token, f"{GRAPH}/me/mailFolders?$top=50").get("value", [])
-    ids = {p["displayName"]: p["id"] for p in pastas}
 
     # ---- recebidos: exames (.dmw) ----
     exames = {}
     for pasta in PASTAS_RECEBIDOS:
-        pasta_id = ids.get(pasta, pasta)  # 'inbox' e nome conhecido da API
-        msgs = listar(
-            token, pasta_id,
-            "from,subject,receivedDateTime,conversationId,hasAttachments,body",
-            cutoff, "receivedDateTime",
-            expand="attachments($select=name)",
-        )
-        for m in msgs:
-            achados = codigos_de_anexos(m, (".DMW",))
+        for m in cache_email.mensagens(cache, pasta).values():
+            if m["recebido"] < cutoff:
+                continue
+            achados = codigos_de_anexos(m["anexos"], (".DMW",))
             if not achados:
                 continue
             # nomes de anexos entram no texto: fotos tipo
             # "HELENA MARIA - CCQ-11504.png" carregam nome + codigo
-            texto = (texto_plano(m) + " | " +
-                     " | ".join(a.get("name") or ""
-                                for a in m.get("attachments", [])))
-            prazo_msg = extrair_prazo(texto, m["receivedDateTime"])
+            texto = texto_plano(m) + " | " + " | ".join(m["anexos"])
+            prazo_msg = extrair_prazo(texto, m["recebido"])
             for codigo, nome_arq in achados:
                 # nome pode estar no proprio arquivo: "0RC-04973 FULANA.dmw"
                 sobra = re.sub(r"(?i)\.dmw$", "", nome_arq)
@@ -353,17 +311,14 @@ def analisar(dias=30, token=None):
                 if not nome and len(achados) == 1:
                     nome = limpar_nome(nome_avulso(texto))
                 atual = exames.get(codigo)
-                if atual is None or m["receivedDateTime"] < atual["recebido"]:
-                    try:
-                        rem = m["from"]["emailAddress"]["address"].lower()
-                    except (KeyError, TypeError):
-                        rem = "?"
+                if atual is None or m["recebido"] < atual["recebido"]:
+                    rem = (m.get("de") or "?").lower()
                     exames[codigo] = {
                         "codigo": codigo,
                         "nome": nome or (atual or {}).get("nome"),
                         "fonte": rem,
-                        "recebido": m["receivedDateTime"],
-                        "conversa": m.get("conversationId"),
+                        "recebido": m["recebido"],
+                        "conversa": m.get("conversa"),
                         "pasta": pasta,
                         "prazo": prazo_msg or (atual or {}).get("prazo"),
                         "empresa": empresa_de(rem, codigo),
@@ -372,21 +327,17 @@ def analisar(dias=30, token=None):
                     atual["nome"] = nome
 
     # ---- enviados: laudos (.pdf) e conversas respondidas ----
-    enviados = listar(
-        token, "sentitems",
-        "subject,sentDateTime,conversationId,hasAttachments",
-        cutoff, "sentDateTime",
-        expand="attachments($select=name)",
-    )
+    enviados = [m for m in cache_email.mensagens(cache, "sentitems").values()
+                if m["recebido"] >= cutoff]
     codigos_enviados = {}
     conversas_respondidas = defaultdict(list)
     for m in enviados:
-        if m.get("conversationId"):
-            conversas_respondidas[m["conversationId"]].append(m["sentDateTime"])
-        for codigo, _ in codigos_de_anexos(m, (".PDF",)):
+        if m.get("conversa"):
+            conversas_respondidas[m["conversa"]].append(m["recebido"])
+        for codigo, _ in codigos_de_anexos(m["anexos"], (".PDF",)):
             d = codigos_enviados.get(codigo)
-            if d is None or m["sentDateTime"] > d:
-                codigos_enviados[codigo] = m["sentDateTime"]
+            if d is None or m["recebido"] > d:
+                codigos_enviados[codigo] = m["recebido"]
 
     # ---- conciliacao ----
     candidatos_nome = nomes_nas_respostas(enviados)
@@ -608,7 +559,15 @@ def main():
                     help="salva copia datada em relatorios\\")
     args = ap.parse_args()
 
-    dados = analisar(args.dias)
+    token = outlook_auth.get_access_token()
+    cache = cache_email.carregar_cache()
+    while True:
+        progresso = cache_email.sincronizar_um_passo(token, cache)
+        if not progresso:
+            break
+        print(f"Sincronizando: {progresso['pasta']} {progresso['mes']}...")
+
+    dados = analisar(cache, args.dias)
     relatorio = relatorio_texto(dados, args.listar_retornados)
 
     with open("relatorio_pendencias.txt", "w", encoding="utf-8") as f:
