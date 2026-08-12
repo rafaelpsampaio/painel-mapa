@@ -242,3 +242,17 @@ de eventos em vez de três coletas paralelas.
 - Qualquer agregação por convênio (fica só como detalhe de drill-down).
 - OCR pra PDFs sem texto extraível (ex.: o arquivo com texto vazio); eles
   continuam aparecendo como "não identificado" na aba Importações.
+
+## Desvios aceitos na implementação
+
+- A planilha CardioPro não alimenta a lista "Sem pagamento identificado":
+  ela só entra como evidência de pagamento/faturamento. Um exame que
+  aparece só na planilha, sem pagamento IDS/Unimed casado, vira um evento
+  "faturado" visível nos cartões e na lista de eventos, não um caso de
+  investigação.
+- Os filtros implementados no bloco de investigação são exame, força da
+  suspeita e busca por nome. Pagador esperado e período ficaram de fora
+  desta rodada.
+- A cobertura forte/fraca compara mês a mês (granularidade mensal), não
+  dia a dia: um pagamento registrado no mês cobre qualquer exame
+  realizado no mesmo mês, mesmo que a data exata não bata.
