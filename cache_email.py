@@ -47,8 +47,15 @@ def carregar_cache():
             salvo = json.load(f)
     except (OSError, ValueError):
         return base
+    if not isinstance(salvo, dict):
+        return base
+    pastas_salvas = salvo.get("pastas")
+    if not isinstance(pastas_salvas, dict):
+        return base
     for nome in PASTAS:
-        base["pastas"][nome].update(salvo.get("pastas", {}).get(nome, {}))
+        dados = pastas_salvas.get(nome)
+        if isinstance(dados, dict):
+            base["pastas"][nome].update(dados)
     return base
 
 
