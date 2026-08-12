@@ -43,6 +43,7 @@
   select, button { cursor: pointer; }
   header select { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.25);
     color: var(--cor-texto-claro); }
+  header select option { background: var(--cor-navy); color: var(--cor-texto-claro); }
   #btn-atualizar { background: var(--cor-primaria); border: none; color: var(--cor-texto-claro);
     font-weight: 600; }
   #btn-atualizar:disabled { opacity: .6; cursor: wait; }
@@ -507,9 +508,10 @@ async function exportarExcel(tabela) {
   let titulo, colunas, linhas;
   if (tabela === "exames") {
     titulo = "Exames";
-    colunas = COLUNAS_EXAMES;
+    colunas = [...COLUNAS_EXAMES, {chave: "pagamento_texto", rotulo: "Pagamento", tipo: "texto"}];
     linhas = ordenarLista(listaExamesFiltrada(), ordExames.campo, ordExames.direcao,
-      tipoDaColuna(COLUNAS_EXAMES, ordExames.campo));
+      tipoDaColuna(COLUNAS_EXAMES, ordExames.campo))
+      .map(e => ({...e, pagamento_texto: textoPagamento(e)}));
   } else if (tabela === "por-exame") {
     titulo = "Por exame";
     colunas = COLUNAS_POR_EXAME;
@@ -738,6 +740,20 @@ function listaExamesFiltrada() {
   return lista;
 }
 
+function textoPagamento(e) {
+  // texto equivalente ao badge de pagCelula em renderExames(), pra exportacao
+  // (mesma prioridade: pagamento > repeticao > sem registro > aguardando)
+  if (e.pagamento) {
+    if (e.pagamento.tipo === "faturado") return "Faturado";
+    return "Confirmado" +
+      (e.pagamento.valor != null ? " " + brl(e.pagamento.valor) : "") +
+      (e.pagamento.pagador ? " (" + e.pagamento.pagador + ")" : "");
+  }
+  if (e.repeticao) return "Repetição";
+  if (e.pagamento_esperado) return "Sem registro";
+  return "Aguardando ciclo";
+}
+
 function renderExames() {
   if (!dados) return;
   let lista = listaExamesFiltrada();
@@ -777,12 +793,12 @@ function renderExames() {
     return "<tr><td class='codigo'>" + esc(e.codigo) + "</td>" +
       "<td>" + esc(e.nome || "(sem nome)") + "</td>" +
       "<td>" + esc(e.empresa) + "</td>" +
-      "<td>" + dataBr(e.recebido) + "</td>" +
-      "<td>" + (e.prazo ? dataBr(e.prazo)
+      "<td>" + dataBrAno(e.recebido) + "</td>" +
+      "<td>" + (e.prazo ? dataBrAno(e.prazo)
                         : "<span style='color:var(--cor-texto-fraco)'>sem prazo</span>") + "</td>" +
       "<td><span class='badge b-" + e.status + "'>" +
         ROTULOS[e.status] + "</span></td>" +
-      "<td>" + (e.retornado_em ? dataBr(e.retornado_em) : "") + "</td>" +
+      "<td>" + (e.retornado_em ? dataBrAno(e.retornado_em) : "") + "</td>" +
       "<td>" + pagCelula + "</td>" +
       "<td>" + (podeBaixa
         ? "<button class='btn-baixa' onclick=\"darBaixa('" + esc(e.codigo) +
@@ -808,13 +824,13 @@ function preencherFiltroEmpresas() {
 
 function linhaExame(ex, extra) {
   const prazo = ex.prazo
-    ? (ex.atrasado ? "<span class='alerta'>" + dataBr(ex.prazo) + "</span>"
-                   : dataBr(ex.prazo))
+    ? (ex.atrasado ? "<span class='alerta'>" + dataBrAno(ex.prazo) + "</span>"
+                   : dataBrAno(ex.prazo))
     : "<span style='color:var(--cor-texto-fraco)'>não informado</span>";
   return "<tr><td class='codigo'>" + esc(ex.codigo) + "</td>" +
     "<td>" + esc(ex.nome || "(nome não identificado)") + "</td>" +
     "<td>" + esc(ex.fonte) + "</td>" +
-    "<td>" + dataBr(ex.recebido) + " (" + ex.dias_espera + "d)</td>" +
+    "<td>" + dataBrAno(ex.recebido) + " (" + ex.dias_espera + "d)</td>" +
     "<td>" + prazo + "</td>" +
     (extra || "") +
     "<td><button class='btn-baixa' onclick=\"darBaixa('" +
@@ -825,7 +841,8 @@ function render() {
   const c = dados.contagens;
   document.getElementById("subtitulo").textContent =
     formatarPeriodoAtivo(dados.data_de, dados.data_ate) +
-    " · atualizado em " + dados.gerado_em + " · email ativo ✓";
+    " · atualizado em " + dados.gerado_em + " · email ativo ✓" +
+    (dados.versao ? " · v" + dados.versao : "");
 
   const atrasados = dados.pendentes.filter(e => e.atrasado);
   const noPrazo = dados.pendentes.filter(e => !e.atrasado);
@@ -856,7 +873,7 @@ function render() {
   const cobNomes = Object.keys(cob);
   document.getElementById("cobertura-nota").textContent = cobNomes.length
     ? "Pagamentos já cobrem exames de: " + cobNomes.map(n =>
-        n + " " + dataBr(cob[n].inicio) + " a " + dataBr(cob[n].fim))
+        n + " " + dataBrAno(cob[n].inicio) + " a " + dataBrAno(cob[n].fim))
         .join(" · ") + ". Laudo dentro dessa janela sem pagamento " +
         "aparece como \"sem registro\"."
     : "";

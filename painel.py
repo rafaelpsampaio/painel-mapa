@@ -10,6 +10,7 @@ nao ha tarefa agendada.
 
 import json
 import os
+import subprocess
 import sys
 import threading
 import urllib.request
@@ -41,6 +42,29 @@ if sys.stdout is None or sys.stderr is None:
         sys.stderr = _log
 PASTA = os.path.dirname(os.path.abspath(__file__))
 TRAVA = threading.Lock()  # uma varredura de cada vez
+
+
+def _versao_atual():
+    """SHA curto da versao rodando: de .versao (maquinas atualizadas via
+    zip pelo autoatualizador) ou do git (maquina de desenvolvimento);
+    None se nenhum dos dois estiver disponivel."""
+    arq = os.path.join(PASTA, ".versao")
+    if os.path.exists(arq):
+        try:
+            with open(arq, "r", encoding="utf-8") as f:
+                sha = f.read().strip()
+            if sha:
+                return sha[:10]
+        except OSError:
+            pass
+    try:
+        r = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=PASTA,
+                            capture_output=True, text=True, timeout=5)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip() + " (dev)"
+    except Exception:
+        pass
+    return None
 
 
 def salvar_historico(dados):
@@ -110,6 +134,7 @@ class Handler(BaseHTTPRequestHandler):
                         cruzar_pagamentos.anotar_pagamentos(dados))
                 except Exception:
                     dados["pagamentos_orfaos"] = []
+                dados["versao"] = _versao_atual()
                 salvar_historico(dados)
                 self._json(dados)
 

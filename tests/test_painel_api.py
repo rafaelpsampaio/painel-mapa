@@ -113,3 +113,14 @@ def test_api_exportar_devolve_xlsx():
     finally:
         servidor.shutdown()
         thread.join(timeout=5)
+
+
+def test_versao_atual_le_arquivo_versao(tmp_path, monkeypatch):
+    monkeypatch.setattr(painel, "PASTA", str(tmp_path))
+    (tmp_path / ".versao").write_text("abcdef1234567890", encoding="utf-8")
+    assert painel._versao_atual() == "abcdef1234"
+
+
+def test_versao_atual_sem_arquivo_versao_nem_git(tmp_path, monkeypatch):
+    monkeypatch.setattr(painel, "PASTA", str(tmp_path))
+    assert painel._versao_atual() is None
