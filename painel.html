@@ -146,7 +146,7 @@
 
   .grafico-barras { display: flex; align-items: flex-end; gap: 10px;
     height: 180px; padding-top: 8px; overflow-x: auto; }
-  .gb-col { flex: 1; min-width: 42px; display: flex; flex-direction: column;
+  .gb-col { flex: 1; min-width: 90px; display: flex; flex-direction: column;
     align-items: center; gap: 4px; }
   .gb-pilha { width: 100%; max-width: 56px; display: flex;
     flex-direction: column-reverse; height: 150px; cursor: pointer; }
@@ -447,6 +447,9 @@ function brl(v) {
   if (v == null) return "";
   return v.toLocaleString("pt-BR", {style: "currency", currency: "BRL"});
 }
+function num(n) {
+  return (n || 0).toLocaleString("pt-BR");
+}
 function normJs(s) {
   return (s || "").toUpperCase().normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
@@ -713,7 +716,7 @@ function renderExames() {
     tipoDaColuna(COLUNAS_EXAMES, ordExames.campo));
 
   document.getElementById("f-contagem").textContent =
-    lista.length + " exame" + (lista.length === 1 ? "" : "s");
+    num(lista.length) + " exame" + (lista.length === 1 ? "" : "s");
 
   const LIMITE = 800;
   const corte = lista.length > LIMITE;
@@ -800,21 +803,21 @@ function render() {
     .filter(e => e.pagamento_esperado && !e.pagamento).length;
 
   document.getElementById("cards").innerHTML =
-    "<div class='card vermelho'><div class='num'>" + atrasados.length +
+    "<div class='card vermelho'><div class='num'>" + num(atrasados.length) +
       "</div><div class='rot'>Atrasados</div></div>" +
-    "<div class='card azul'><div class='num'>" + noPrazo.length +
+    "<div class='card azul'><div class='num'>" + num(noPrazo.length) +
       "</div><div class='rot'>Aguardando prazo</div></div>" +
-    "<div class='card verde'><div class='num'>" + c.retornados +
+    "<div class='card verde'><div class='num'>" + num(c.retornados) +
       "</div><div class='rot'>Laudos enviados</div></div>" +
-    "<div class='card verde'><div class='num'>" + pagos +
+    "<div class='card verde'><div class='num'>" + num(pagos) +
       "</div><div class='rot'>Pagamentos confirmados</div></div>" +
     "<div class='card ambar' style='cursor:pointer' onclick='verFaltando()'" +
       " title='Laudos dentro do período que os demonstrativos ja pagam, " +
       "mas sem registro neles. Clique para ver a lista'><div class='num'>" +
-      emFalta + "</div><div class='rot'>Sem registro de pagamento</div></div>" +
-    "<div class='card ambar'><div class='num'>" + (c.provaveis + c.avisos) +
+      num(emFalta) + "</div><div class='rot'>Sem registro de pagamento</div></div>" +
+    "<div class='card ambar'><div class='num'>" + num(c.provaveis + c.avisos) +
       "</div><div class='rot'>Para conferir</div></div>" +
-    "<div class='card cinza'><div class='num'>" + c.recebidos +
+    "<div class='card cinza'><div class='num'>" + num(c.recebidos) +
       "</div><div class='rot'>Recebidos no período</div></div>";
 
   const cob = dados.cobertura_pagamentos || {};
@@ -852,22 +855,22 @@ function render() {
   }
   if (st.empresas && st.empresas.length) {
     stHtml += "<p style='margin:8px 0 4px'><b>Por empresa:</b> " +
-      st.empresas.map(e => esc(e.empresa) + ": " + e.exames + " mapas (" +
-        e.pendentes + " pend.)").join(" · ") + "</p>";
+      st.empresas.map(e => esc(e.empresa) + ": " + num(e.exames) + " mapas (" +
+        num(e.pendentes) + " pend.)").join(" · ") + "</p>";
   }
   stHtml += "<table><tr><th>Fonte</th><th>Exames</th><th>Último envio</th></tr>" +
     st.fontes.map(f =>
-      "<tr><td>" + esc(f.fonte) + "</td><td>" + f.exames + "</td><td>" +
+      "<tr><td>" + esc(f.fonte) + "</td><td>" + num(f.exames) + "</td><td>" +
       dataBr(f.ultimo) +
       (f.dias_sem_enviar >= 7 ? " <span class='alerta'>sem enviar há " +
-        f.dias_sem_enviar + " dias</span>" : "") +
+        num(f.dias_sem_enviar) + " dias</span>" : "") +
       "</td></tr>").join("") + "</table>";
   document.getElementById("sec-status").innerHTML = stHtml;
 
   let extras = "";
   if (dados.provaveis.length) {
     extras += "<details open><summary>Provavelmente laudados, conferir (" +
-      dados.provaveis.length + ")</summary><div class='corpo'>" +
+      num(dados.provaveis.length) + ")</summary><div class='corpo'>" +
       "<p>Sem o PDF com o código, mas um nome parecido aparece em resposta " +
       "enviada.</p><table>" +
       dados.provaveis.map(e => linhaExame(e,
@@ -876,21 +879,21 @@ function render() {
   }
   if (dados.avisos.length) {
     extras += "<details open><summary>Respondidos sem laudo anexado, conferir (" +
-      dados.avisos.length + ")</summary><div class='corpo'>" +
+      num(dados.avisos.length) + ")</summary><div class='corpo'>" +
       "<p>O email foi respondido, mas sem PDF do exame e sem nome parecido. " +
       "Vale conferir se o laudo realmente foi.</p><table>" +
       dados.avisos.map(e => linhaExame(e)).join("") + "</table></div></details>";
   }
   if (dados.buracos.length) {
     extras += "<details><summary>Possíveis exames não recebidos, numeração pulada (" +
-      dados.buracos.length + ")</summary><div class='corpo'>" +
+      num(dados.buracos.length) + ")</summary><div class='corpo'>" +
       "<p>Números pulados nas sequências das fontes. Pode ser exame que não " +
       "chegou, ou exame de outro médico.</p><p class='codigo'>" +
       dados.buracos.map(esc).join(" &nbsp; ") + "</p></div></details>";
   }
   if (dados.baixados.length) {
     extras += "<details><summary>Baixados manualmente (" +
-      dados.baixados.length + ")</summary><div class='corpo'><table>" +
+      num(dados.baixados.length) + ")</summary><div class='corpo'><table>" +
       dados.baixados.map(e =>
         "<tr><td class='codigo'>" + esc(e.codigo) + "</td><td>" +
         esc(e.nome || "") + "</td><td>" + esc(e.baixa) + "</td></tr>")
@@ -902,7 +905,7 @@ function render() {
   if (dados.pagamentos_orfaos && dados.pagamentos_orfaos.length) {
     orf.innerHTML =
       "<details><summary>Pagamentos sem exame correspondente (" +
-      dados.pagamentos_orfaos.length + ")</summary><div class='corpo'>" +
+      num(dados.pagamentos_orfaos.length) + ")</summary><div class='corpo'>" +
       "<p>Constam nos demonstrativos, dentro do período coberto pelos " +
       "emails, mas nenhum exame da caixa casou por nome+data. Podem ser " +
       "exames laudados fora do email (presenciais) ou divergência de " +
@@ -1005,7 +1008,7 @@ function detalheDocumentoFin(doc) {
   if (doc.meses) {
     h += "<table><tr><th>Mês</th><th>ECG</th><th>MAPA</th></tr>" +
       doc.meses.map(m => "<tr><td>" + esc(m.mes) + "</td><td>" +
-        m.ecg + "</td><td>" + m.mapa + "</td></tr>").join("") + "</table>";
+        num(m.ecg) + "</td><td>" + num(m.mapa) + "</td></tr>").join("") + "</table>";
   } else {
     h += "<table><tr><th>Tipo</th>" +
       (doc.linhas.some(l => l.detalhe) ? "<th>Unidade</th>" : "") +
@@ -1013,12 +1016,12 @@ function detalheDocumentoFin(doc) {
       doc.linhas.map(l => "<tr><td>" + esc(l.tipo) + "</td>" +
         (doc.linhas.some(x => x.detalhe)
           ? "<td>" + esc(l.detalhe || "") + "</td>" : "") +
-        "<td>" + l.qtd + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
+        "<td>" + num(l.qtd) + "</td><td>" + brlSeguro(l.valor) + "</td></tr>")
         .join("") + "</table>";
   }
   if (doc.executantes) {
     h += "<p class='nota' style='margin-top:8px'>" + doc.executantes.map(e =>
-      esc(e.nome) + ": " + e.servicos + " serviços (" + brlSeguro(e.valor) +
+      esc(e.nome) + ": " + num(e.servicos) + " serviços (" + brlSeguro(e.valor) +
       ")").join(" · ") + "</p>";
     if (doc.bruto) {
       h += "<p style='margin-top:4px'><b>Bruto p/ nota: " + brlSeguro(doc.bruto) +
@@ -1068,10 +1071,10 @@ function renderSecaoImportacoes(idSecao, secao) {
   }
   const naoId = secao.arquivos.filter(a => a.status === "nao_identificado").length;
   const erro = secao.arquivos.filter(a => a.status === "erro").length;
-  resumoEl.textContent = secao.arquivos.length + " arquivo" +
+  resumoEl.textContent = num(secao.arquivos.length) + " arquivo" +
     (secao.arquivos.length === 1 ? "" : "s") +
-    (naoId ? " · " + naoId + " não identificado" + (naoId === 1 ? "" : "s") : "") +
-    (erro ? " · " + erro + " com erro" : "");
+    (naoId ? " · " + num(naoId) + " não identificado" + (naoId === 1 ? "" : "s") : "") +
+    (erro ? " · " + num(erro) + " com erro" : "");
   const ordenados = secao.arquivos.slice().sort((a, b) =>
     ordemStatusImportacao(a.status) - ordemStatusImportacao(b.status) ||
     a.arquivo.localeCompare(b.arquivo));
@@ -1201,7 +1204,7 @@ function renderSemPagamento() {
     (!fBusca || normJs(c.paciente).includes(fBusca)));
   const fortes = casos.filter(c => c.forca === "forte").length;
   document.getElementById("sp-contagem").textContent =
-    visiveis.length + " caso(s) · " + fortes + " forte(s)";
+    num(visiveis.length) + " caso(s) · " + num(fortes) + " forte(s)";
 
   const linhas = visiveis.map(c => {
     const badge = c.forca === "forte"
@@ -1238,14 +1241,14 @@ function renderCardsRecebimentos() {
   const t = rec.totais;
   let h = cardRec("Total recebido", brl(t.valor), null,
                   "mostrarEventos('Todos os eventos', function(e){return true})");
-  h += cardRec("Exames pagos/faturados", t.exames, null,
+  h += cardRec("Exames pagos/faturados", num(t.exames), null,
                "mostrarEventos('Exames pagos', function(e){return e.exame !== 'Consulta'})");
-  h += cardRec("Consultas", t.consultas, null,
+  h += cardRec("Consultas", num(t.consultas), null,
                "mostrarEventos('Consultas', function(e){return e.exame === 'Consulta'})");
   for (const nome of ["IDS", "Unimed", "CardioPro"]) {
     const p = t.por_pagador[nome];
     if (!p) continue;
-    h += cardRec(nome, p.qtd, valorAgregado(p.valor),
+    h += cardRec(nome, num(p.qtd), valorAgregado(p.valor),
                  "mostrarEventos('" + nome + "', function(e){return e.pagador === '" +
                  nome + "'})");
   }
@@ -1273,7 +1276,7 @@ function renderPorExame() {
     tipoDaColuna(COLUNAS_POR_EXAME, ordPorExame.campo));
   const linhas = lista.map(x =>
     "<tr style='cursor:pointer' onclick=\"mostrarEventosPorExame('" + x.exame + "')\">" +
-    "<td>" + esc(x.exame) + "</td><td class='num'>" + x.qtd + "</td>" +
+    "<td>" + esc(x.exame) + "</td><td class='num'>" + num(x.qtd) + "</td>" +
     "<td class='num'>" + valorAgregado(x.valor) +
     "</td><td class='num'>" +
     (x.valor > 0 && x.qtd ? brl(x.valor / x.qtd) : "") + "</td></tr>").join("");
@@ -1287,7 +1290,7 @@ function renderPorExame() {
 function mostrarEventos(titulo, filtroFn) {
   eventosVisiveis = (rec.eventos || []).filter(filtroFn);
   document.getElementById("eventos-titulo").textContent =
-    titulo + " (" + eventosVisiveis.length + ")";
+    titulo + " (" + num(eventosVisiveis.length) + ")";
   document.getElementById("eventos-busca").value = "";
   renderEventosFiltrados();
   const bloco = document.getElementById("bloco-eventos");
@@ -1329,7 +1332,7 @@ function renderEventosFiltrados() {
     "<table><thead><tr>" +
     cabecalhoOrdenavel(COLUNAS_EVENTOS, ordEventos, "ordenarEventosPor") +
     "<th>Documento</th></tr></thead><tbody>" + linhas + "</tbody></table>" +
-    (lista.length > 500 ? "<p class='nota'>Mostrando 500 de " + lista.length +
+    (lista.length > 500 ? "<p class='nota'>Mostrando 500 de " + num(lista.length) +
      "; use a busca pra refinar.</p>" : "");
 }
 
@@ -1344,14 +1347,14 @@ function renderDocumentosFin() {
     const docsOrdenados = rec.documentos[nome].documentos.slice()
       .sort((a, b) => chaveDataFin(b).localeCompare(chaveDataFin(a)));
     listas += "<section class='bloco'><details><summary><h2 style='display:inline'>" +
-      "Documentos · " + esc(nome) + " (" + docsOrdenados.length +
+      "Documentos · " + esc(nome) + " (" + num(docsOrdenados.length) +
       ")</h2></summary><div class='doc-fin-lista'>" +
       docsOrdenados.map(doc => {
         const r = resumoDocumentoFin(doc);
         return "<details><summary>" +
           "<span class='doc-data'>" + esc(dataDocumentoFin(doc)) + "</span>" +
           "<span class='doc-tipo'>" + esc(doc.tipo_amigavel || TIPO_AMIGAVEL_FIN[nome]) + "</span>" +
-          "<span class='doc-num'>" + r.qtd + " itens" +
+          "<span class='doc-num'>" + num(r.qtd) + " itens" +
           (r.valor != null ? " · " + brl(r.valor) : "") + "</span></summary>" +
           "<div class='corpo'><p class='nota'>" + esc(doc.arquivo) + "</p>" +
           detalheDocumentoFin(doc) + "</div></details>";
