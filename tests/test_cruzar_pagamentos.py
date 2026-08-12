@@ -1,7 +1,4 @@
-from datetime import datetime
-
 import cruzar_pagamentos as cp
-import eventos as ev
 
 
 def _dados(exames):
