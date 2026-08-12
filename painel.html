@@ -193,6 +193,15 @@
   .legenda span { display: inline-flex; align-items: center; gap: 7px; color: var(--cor-texto-fraco); }
   .ponto { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
 
+  .grafico-barras { display: flex; align-items: flex-end; gap: 10px;
+    height: 180px; padding-top: 8px; overflow-x: auto; }
+  .gb-col { flex: 1; min-width: 42px; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; }
+  .gb-pilha { width: 100%; max-width: 56px; display: flex;
+    flex-direction: column-reverse; height: 150px; cursor: pointer; }
+  .gb-fatia { width: 100%; }
+  .gb-rotulo { font-size: 11px; color: var(--cor-texto-fraco); }
+
   .tooltip-fin { position: fixed; pointer-events: none; background: var(--cor-navy);
     color: var(--cor-texto-claro); font-size: 12.5px; padding: 7px 11px; border-radius: var(--raio-pequeno);
     box-shadow: 0 4px 14px rgba(0,0,0,.25); opacity: 0; transform: translateY(4px);
@@ -992,7 +1001,47 @@ async function carregarRecebimentos() {
 
 function renderMeses(vista) {
   vistaMes = vista || vistaMes;
-  // gráfico em si vem da Task 10
+  document.getElementById("btn-mes-pagador").classList.toggle("ativa", vistaMes === "pagador");
+  document.getElementById("btn-mes-exame").classList.toggle("ativa", vistaMes === "exame");
+  const meses = rec ? rec.por_mes : [];
+  if (!meses.length) {
+    document.getElementById("grafico-meses").innerHTML =
+      "<p class='nota'>Nenhum evento com data.</p>";
+    document.getElementById("legenda-meses").innerHTML = "";
+    return;
+  }
+  const chave = vistaMes === "pagador" ? "por_pagador" : "por_exame";
+  const series = [];   // nomes na ordem de aparicao, cor estavel
+  meses.forEach(m => Object.keys(m[chave]).forEach(n => {
+    if (!series.includes(n)) series.push(n);
+  }));
+  const corDe = n => PALETA_FORNECEDOR[series.indexOf(n) % PALETA_FORNECEDOR.length];
+  const maxV = Math.max(...meses.map(m =>
+    Object.values(m[chave]).reduce((s, x) => s + x.valor, 0)));
+  const cols = meses.map((m, i) => {
+    const totalMes = Object.values(m[chave]).reduce((s, x) => s + x.valor, 0);
+    const fatias = series.filter(n => m[chave][n]).map(n => {
+      const v = m[chave][n].valor;
+      const h = maxV ? Math.round(140 * v / maxV) : 0;
+      return "<div class='gb-fatia' style='height:" + h + "px;background:" +
+        corDe(n) + "' title='" + esc(n) + ": " + esc(brl(v)) + "'></div>";
+    }).join("");
+    return "<div class='gb-col'><div class='gb-pilha' onclick=\"mostrarEventosDoMes(" + i +
+      ")\">" + fatias + "</div><div class='gb-rotulo'>" + formatMes(m.mes) + "</div>" +
+      "<div class='gb-rotulo'>" + esc(brl(totalMes)) + "</div></div>";
+  }).join("");
+  document.getElementById("grafico-meses").innerHTML =
+    "<div class='grafico-barras'>" + cols + "</div>";
+  document.getElementById("legenda-meses").innerHTML = series.map(n =>
+    "<span><span class='ponto' style='background:" + corDe(n) +
+    "'></span>" + esc(n) + "</span>").join("");
+}
+
+function mostrarEventosDoMes(i) {
+  const m = rec.por_mes[i];
+  mostrarEventos(formatMes(m.mes), function(e) {
+    return e.data && e.data.slice(0, 7) === m.mes;
+  });
 }
 
 function renderSemPagamento() {
