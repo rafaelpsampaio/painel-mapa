@@ -84,8 +84,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json({"painel": "mapa"})
 
             elif rota.path == "/api/dados":
-                dias = int(parse_qs(rota.query).get("dias", ["30"])[0])
-                dias = max(1, min(dias, 365))
+                qs = parse_qs(rota.query)
+                data_de = qs.get("de", [""])[0] or None
+                data_ate = qs.get("ate", [""])[0] or None
                 try:
                     token = outlook_auth.get_access_token("silencioso")
                 except outlook_auth.AuthExpirada as e:
@@ -102,7 +103,7 @@ class Handler(BaseHTTPRequestHandler):
                         baixar_repasses.varrer(token)
                     except Exception:
                         pass  # sem repasses novos nao pode travar o painel
-                    dados = rotina_pendencias.analisar(cache, dias)
+                    dados = rotina_pendencias.analisar(cache, data_de, data_ate)
                 try:
                     import cruzar_pagamentos
                     dados["pagamentos_orfaos"] = (
@@ -113,8 +114,11 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(dados)
 
             elif rota.path == "/api/recebimentos":
+                qs = parse_qs(rota.query)
+                data_de = qs.get("de", [""])[0] or None
+                data_ate = qs.get("ate", [""])[0] or None
                 import eventos
-                self._json(eventos.recebimentos())
+                self._json(eventos.recebimentos(data_de=data_de, data_ate=data_ate))
 
             elif rota.path == "/api/importacoes":
                 self._json(ler_repasses.importacoes())
@@ -171,6 +175,22 @@ class Handler(BaseHTTPRequestHandler):
                 cod = rotina_pendencias.registrar_baixa(
                     corpo.get("codigo", ""), corpo.get("motivo", ""))
                 self._json({"ok": True, "codigo": cod})
+            elif rota.path == "/api/exportar":
+                tam = int(self.headers.get("Content-Length", "0"))
+                corpo = json.loads(self.rfile.read(tam).decode("utf-8"))
+                import exportar_excel
+                conteudo, nome_arquivo = exportar_excel.gerar(corpo)
+                self.send_response(200)
+                self.send_header(
+                    "Content-Type",
+                    "application/vnd.openxmlformats-officedocument."
+                    "spreadsheetml.sheet")
+                self.send_header(
+                    "Content-Disposition",
+                    f'attachment; filename="{nome_arquivo}"')
+                self.send_header("Content-Length", str(len(conteudo)))
+                self.end_headers()
+                self.wfile.write(conteudo)
             else:
                 self._json({"erro": "rota desconhecida"}, 404)
         except ValueError as e:
