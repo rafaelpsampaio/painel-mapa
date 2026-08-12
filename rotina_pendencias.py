@@ -558,10 +558,10 @@ def main():
                     help="salva copia datada em relatorios\\")
     args = ap.parse_args()
 
-    token = outlook_auth.get_access_token()
     cache = cache_email.carregar_cache()
     while True:
-        progresso = cache_email.sincronizar_um_passo(token, cache)
+        progresso = cache_email.sincronizar_um_passo(
+            outlook_auth.get_access_token(), cache)
         if not progresso:
             break
         print(f"Sincronizando: {progresso['pasta']} {progresso['mes']}...")

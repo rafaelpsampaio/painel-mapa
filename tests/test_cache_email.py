@@ -184,6 +184,23 @@ def test_registro_de_mensagem_de_pasta_de_exame():
     assert "<b>" not in registro["corpo_texto"]
 
 
+def test_registro_de_colapsa_espacos_e_quebras_de_linha_do_corpo():
+    msg = {
+        "subject": "Exame MAPA",
+        "receivedDateTime": "2026-08-01T10:00:00Z",
+        "conversationId": "conv-1",
+        "attachments": [],
+        "body": {"content": (
+            "<html>\n  <body>\n    <p>Segue   anexo.</p>\n\n"
+            "    <p>HELENA MARIA</p>\n  </body>\n</html>\n"
+        )},
+    }
+    registro = ce._registro_de(msg, ce.PASTAS["inbox"])
+    assert registro["corpo_texto"] == "Segue anexo. HELENA MARIA"
+    assert "\n" not in registro["corpo_texto"]
+    assert "  " not in registro["corpo_texto"]
+
+
 def test_registro_de_mensagem_enviada_sem_from_nem_corpo():
     msg = {
         "subject": "RE: Exame MAPA",
@@ -273,6 +290,46 @@ def test_backfill_avanca_ate_cobrir_o_limite_e_marca_ultimo_sync(tmp_path, monke
         limite = agora - timedelta(days=ce.DIAS_BACKFILL)
         assert ce._parse(estado["backfill_completo_ate"]) <= limite
         assert estado["ultimo_sync"] is not None
+
+
+def test_backfill_retomado_em_sessoes_diferentes_ancora_ultimo_sync_no_inicio(tmp_path, monkeypatch):
+    """Regressao: um backfill pode ser retomado em sessoes bem separadas no
+    tempo (app fechado e reaberto dias depois), ja que cada chamada avanca
+    so um bloco. ultimo_sync precisa ficar ancorado no INICIO do backfill
+    da pasta (T0), nao no "agora" do bloco que o conclui (que pode ser
+    dias depois de T0) -- senao mensagens chegadas durante o proprio
+    backfill caem num buraco que nem o backfill nem a sincronizacao
+    incremental cobrem."""
+    monkeypatch.setattr(ce, "ARQ_CACHE", str(tmp_path / "cache_emails.json"))
+    monkeypatch.setattr(ce, "DIAS_BACKFILL", 70)
+    cache = ce.carregar_cache()
+    monkeypatch.setattr(ce, "_buscar", lambda *a, **k: [])
+    monkeypatch.setattr(ce, "_resolver_ids_pastas",
+                        lambda token: {"MAPA": "m", "UNIMED": "u", "IDS": "i"})
+
+    t0 = datetime(2026, 8, 12, tzinfo=timezone.utc)
+
+    # bloco 1: inicia o backfill do inbox (primeira pasta) em T0
+    p1 = ce.sincronizar_um_passo("tok", cache, agora=t0)
+    assert p1["pasta"] == "inbox"
+    assert cache["pastas"]["inbox"]["ultimo_sync"] == ce._fmt(t0)
+
+    # bloco 2: sessao retomada 3 dias depois -- ainda backfill do inbox
+    p2 = ce.sincronizar_um_passo("tok", cache, agora=t0 + timedelta(days=3))
+    assert p2["pasta"] == "inbox"
+    assert cache["pastas"]["inbox"]["ultimo_sync"] == ce._fmt(t0)
+
+    # bloco 3: sessao retomada 5 dias depois de T0 -- conclui o backfill
+    # do inbox
+    p3 = ce.sincronizar_um_passo("tok", cache, agora=t0 + timedelta(days=5))
+    assert p3["pasta"] == "inbox"
+    limite_final = (t0 + timedelta(days=5)) - timedelta(days=ce.DIAS_BACKFILL)
+    assert ce._parse(cache["pastas"]["inbox"]["backfill_completo_ate"]) <= limite_final
+
+    # ultimo_sync continua perto de T0 (inicio do backfill), nao dos 5
+    # dias depois em que o ultimo bloco rodou
+    ultimo_sync = ce._parse(cache["pastas"]["inbox"]["ultimo_sync"])
+    assert ultimo_sync == t0
 
 
 def test_apos_backfill_completo_proximo_passo_e_incremental(tmp_path, monkeypatch):

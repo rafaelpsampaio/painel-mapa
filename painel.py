@@ -91,17 +91,17 @@ class Handler(BaseHTTPRequestHandler):
                 except outlook_auth.AuthExpirada as e:
                     self._json({"precisa_login": True, "mensagem": str(e)})
                     return
-                try:
-                    import baixar_repasses
-                    baixar_repasses.varrer(token)
-                except Exception:
-                    pass  # sem repasses novos nao pode travar o painel
                 with TRAVA:
                     cache = cache_email.carregar_cache()
                     progresso = cache_email.sincronizar_um_passo(token, cache)
                     if progresso:
                         self._json({"sincronizando": progresso})
                         return
+                    try:
+                        import baixar_repasses
+                        baixar_repasses.varrer(token)
+                    except Exception:
+                        pass  # sem repasses novos nao pode travar o painel
                     dados = rotina_pendencias.analisar(cache, dias)
                 try:
                     import cruzar_pagamentos

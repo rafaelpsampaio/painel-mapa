@@ -123,7 +123,8 @@ def _texto_plano_de_corpo(conteudo_html):
     import html as htmlmod
     texto = _RE_STYLE.sub(" ", conteudo_html or "")
     texto = _RE_TAG.sub(" ", texto)
-    return htmlmod.unescape(texto)
+    texto = htmlmod.unescape(texto)
+    return re.sub(r"\s+", " ", texto).strip()
 
 
 def _registro_de(msg, config):
@@ -216,6 +217,15 @@ def sincronizar_um_passo(token, cache, agora=None):
         pasta = pasta_pendente
         config = PASTAS[pasta]
         estado = cache["pastas"][pasta]
+        if estado["backfill_completo_ate"] is None:
+            # ancora ultimo_sync no INICIO do backfill desta pasta (T0), nao
+            # no momento em que o ULTIMO bloco terminar. Um backfill pode
+            # ser retomado em sessoes bem separadas no tempo (app fechado e
+            # reaberto dias depois); se ultimo_sync ficasse com o "agora" do
+            # bloco final, a sincronizacao incremental que comeca dali so
+            # olharia para tras a partir desse momento tardio, deixando sem
+            # cobertura mensagens chegadas durante o proprio backfill.
+            estado["ultimo_sync"] = _fmt(agora)
         fim = (_parse(estado["backfill_completo_ate"])
                if estado["backfill_completo_ate"] else agora)
         inicio_bloco = max(limite, fim - timedelta(days=TAMANHO_BLOCO_DIAS))
@@ -224,8 +234,6 @@ def sincronizar_um_passo(token, cache, agora=None):
         for msg in msgs:
             estado["mensagens"][msg["id"]] = _registro_de(msg, config)
         estado["backfill_completo_ate"] = _fmt(inicio_bloco)
-        if inicio_bloco <= limite:
-            estado["ultimo_sync"] = _fmt(agora)
         salvar_cache(cache)
         return {"pasta": pasta, "mes": inicio_bloco.strftime("%Y-%m")}
 
