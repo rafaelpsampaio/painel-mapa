@@ -943,7 +943,7 @@ async function carregarConfig() {
     const c = await (await fetch("/api/config")).json();
     document.getElementById("cfg-pasta").value = c.pasta_documentos || "";
     document.getElementById("cfg-status").textContent = c.pasta_documentos
-      ? "lendo " + c.arquivos + " arquivo(s) desta pasta"
+      ? "lendo " + num(c.arquivos) + " arquivo(s) desta pasta"
       : "nenhuma pasta configurada";
   } catch (e) { /* sem servidor ainda */ }
 }
@@ -963,7 +963,7 @@ async function salvarPasta() {
     return;
   }
   document.getElementById("cfg-status").textContent = pasta
-    ? "salvo: lendo " + resp.arquivos + " arquivo(s). Clique em " +
+    ? "salvo: lendo " + num(resp.arquivos) + " arquivo(s). Clique em " +
       "Atualizar para recruzar os dados."
     : "pasta desativada";
   carregarRecebimentos();
@@ -1088,11 +1088,13 @@ function renderSecaoImportacoes(idSecao, secao) {
 }
 
 let rec = null;            // JSON de /api/recebimentos
+let recPeriodo = null;     // periodo usado na ultima busca de rec
 let eventosVisiveis = [];  // eventos do drill-down aberto
 let vistaMes = "pagador";
 
 async function carregarRecebimentos(periodo) {
   periodo = periodo || periodoAtivo();
+  recPeriodo = periodo;
   try {
     const qs = new URLSearchParams();
     if (periodo.de) qs.set("de", periodo.de);
@@ -1350,8 +1352,10 @@ function mesesCobertura(periodo) {
   if (!primeiro) return [];
   const hoje = new Date();
   const mesAtual = hoje.getFullYear() + "-" + String(hoje.getMonth() + 1).padStart(2, "0");
-  const ultimoFiltro = periodo.ate ? periodo.ate.slice(0, 7) : mesAtual;
-  const ultimo = ultimoFiltro < mesAtual ? ultimoFiltro : mesAtual;
+  const ultimoComDado = rec.por_mes.length ? rec.por_mes[rec.por_mes.length - 1].mes : null;
+  let ultimo = periodo.ate ? periodo.ate.slice(0, 7) : mesAtual;
+  if (ultimo > mesAtual) ultimo = mesAtual;
+  if (ultimoComDado && ultimo > ultimoComDado) ultimo = ultimoComDado;
   const meses = [];
   let [ano, mes] = primeiro.split("-").map(Number);
   const [anoFim, mesFim] = ultimo.split("-").map(Number);
@@ -1384,19 +1388,23 @@ function svgDonut(pct, cor) {
 
 function renderCobertura() {
   const sec = document.getElementById("sec-cobertura-fin");
-  const meses = mesesCobertura(periodoAtivo());
+  const meses = mesesCobertura(recPeriodo);
   if (!meses.length) { sec.innerHTML = ""; return; }
+  const LIMITE_FALTANDO = 6;
   const itens = ["IDS", "Unimed", "CardioPro"].map(nome => {
     const { pct, faltando } = coberturaEmpresa(nome, meses);
     const cor = pct === 100 ? "var(--cor-ok)" : pct === 0 ? "var(--cor-erro)" : "var(--cor-alerta)";
     const nota = faltando.length
-      ? "Faltou: " + faltando.map(formatMes).join(", ")
+      ? "Faltou: " + faltando.slice(0, LIMITE_FALTANDO).map(formatMes).join(", ") +
+        (faltando.length > LIMITE_FALTANDO
+          ? " e mais " + (faltando.length - LIMITE_FALTANDO) + " mês(es)"
+          : "")
       : "Cobertura completa";
     return "<div class='cob-item'>" + svgDonut(pct, cor) +
       "<div class='cob-nome'>" + esc(nome) + "</div>" +
       "<div class='nota'>" + esc(nota) + "</div></div>";
   }).join("");
-  sec.innerHTML = "<section class='bloco'><h2>Cobertura de documentos</h2>" +
+  sec.innerHTML = "<section class='bloco'><h2>Cobertura de pagamentos por mês</h2>" +
     "<p class='nota'>Meses, dentro do período filtrado, com pelo menos um " +
     "pagamento registrado de cada empresa.</p>" +
     "<div class='cob-grade'>" + itens + "</div></section>";
