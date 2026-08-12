@@ -281,6 +281,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
           <option value="nao">Sem pagamento (qualquer motivo)</option>
         </select>
         <span class="contagem" id="f-contagem"></span>
+        <button onclick="exportarExcel('exames')">Exportar Excel</button>
       </div>
       <div id="tabela-exames"></div>
     </section>
@@ -307,6 +308,9 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
     </section>
     <section class="bloco">
       <h2>Por exame</h2>
+      <div class="filtros" style="justify-content:flex-end">
+        <button onclick="exportarExcel('por-exame')">Exportar Excel</button>
+      </div>
       <div id="tabela-por-exame"></div>
     </section>
     <section class="bloco" id="sec-sem-pagamento"></section>
@@ -318,6 +322,7 @@ aberto (a janelinha preta foi fechada). Dê duplo clique no atalho
       <div class="filtros">
         <input type="text" id="eventos-busca" placeholder="Buscar paciente&hellip;"
           oninput="renderEventosFiltrados()">
+        <button onclick="exportarExcel('eventos')">Exportar Excel</button>
       </div>
       <div id="eventos-corpo"></div>
     </section>
@@ -487,6 +492,51 @@ function mostraAba(nome) {
     document.getElementById("aba-" + a).classList.toggle("oculto", a !== nome);
     document.getElementById("aba-btn-" + a).classList.toggle("ativa", a === nome);
   }
+}
+
+async function exportarExcel(tabela) {
+  let titulo, colunas, linhas;
+  if (tabela === "exames") {
+    titulo = "Exames";
+    colunas = COLUNAS_EXAMES;
+    linhas = ordenarLista(listaExamesFiltrada(), ordExames.campo, ordExames.direcao,
+      tipoDaColuna(COLUNAS_EXAMES, ordExames.campo));
+  } else if (tabela === "por-exame") {
+    titulo = "Por exame";
+    colunas = COLUNAS_POR_EXAME;
+    linhas = ordenarLista(rec.por_exame, ordPorExame.campo, ordPorExame.direcao,
+      tipoDaColuna(COLUNAS_POR_EXAME, ordPorExame.campo));
+  } else if (tabela === "eventos") {
+    titulo = "Eventos";
+    colunas = COLUNAS_EVENTOS;
+    linhas = ordenarLista(listaEventosFiltrada(), ordEventos.campo, ordEventos.direcao,
+      tipoDaColuna(COLUNAS_EVENTOS, ordEventos.campo));
+  } else {
+    return;
+  }
+  let resp;
+  try {
+    resp = await fetch("/api/exportar", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({titulo, colunas, linhas}),
+    });
+  } catch (e) {
+    alert("Não consegui gerar a planilha.");
+    return;
+  }
+  if (!resp.ok) { alert("Não consegui gerar a planilha."); return; }
+  const blob = await resp.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  const cabecalho = resp.headers.get("Content-Disposition") || "";
+  const m = cabecalho.match(/filename="([^"]+)"/);
+  a.download = m ? m[1] : (titulo + ".xlsx");
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 async function carregar() {
