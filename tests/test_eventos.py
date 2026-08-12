@@ -122,6 +122,53 @@ def test_supressao_cruzada_mantem_pacientes_diferentes():
     assert len(evs) == 2
 
 
+def test_supressao_mesmo_pagador_nome_truncado_mesma_data():
+    """Reimpressao do mesmo relatorio com o nome cortado (ex.: coluna
+    estourou no PDF) nao deve contar como dois exames."""
+    evs = ev._suprimir_cruzados([
+        {"pagador": "IDS", "exame": "MAPA",
+         "paciente": "Filomena Marinho De Souza Santos",
+         "data": "2026-03-10", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_a.pdf"},
+        {"pagador": "IDS", "exame": "MAPA",
+         "paciente": "Filomena Marinho De Souz",
+         "data": "2026-03-10", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_b.pdf"},
+    ])
+    assert len(evs) == 1
+    assert evs[0]["paciente"] == "Filomena Marinho De Souza Santos"
+
+
+def test_supressao_mesmo_pagador_nome_grudado_com_convenio_desconhecido():
+    """Convenio nao cadastrado em CONVENIO_DISPLAY fica grudado no nome
+    (ex.: "Votorantim Cimento Br - Empre"); mesmo assim e o mesmo paciente
+    reaparecendo no mesmo pagador."""
+    evs = ev._suprimir_cruzados([
+        {"pagador": "IDS", "exame": "MAPA",
+         "paciente": "Sandro Cravo Soares Votorantim Cimento Br - Empre",
+         "data": "2026-03-10", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_a.pdf"},
+        {"pagador": "IDS", "exame": "MAPA", "paciente": "Sandro Cravo Soares",
+         "data": "2026-03-10", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_b.pdf"},
+    ])
+    assert len(evs) == 1
+
+
+def test_supressao_mesmo_pagador_datas_distantes_nao_suprime():
+    """Mesmo nome, mesmo pagador, mas datas 5 dias distantes: exames
+    diferentes (janela do mesmo pagador e 0-1 dia, nao 10)."""
+    evs = ev._suprimir_cruzados([
+        {"pagador": "IDS", "exame": "MAPA", "paciente": "Maria Souza",
+         "data": "2026-03-10", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_a.pdf"},
+        {"pagador": "IDS", "exame": "MAPA", "paciente": "Maria Souza",
+         "data": "2026-03-15", "valor": 45.0, "convenio": None,
+         "tipo": "pago", "documento": "relatorio_b.pdf"},
+    ])
+    assert len(evs) == 2
+
+
 def _ev(**kw):
     base = {"pagador": "IDS", "exame": "MAPA", "paciente": "Maria Souza",
             "data": "2026-03-10", "valor": 45.0, "convenio": None,

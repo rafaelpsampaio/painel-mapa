@@ -261,7 +261,15 @@ def _suprimir_cruzados(eventos):
     """O mesmo exame pago/faturado em fontes de pagadores diferentes conta
     uma vez, pela fonte de maior prioridade (IDS > Unimed > CardioPro).
     Casamento aproximado (casa_nome, +-10 dias) porque as fontes grafam o
-    nome de formas diferentes."""
+    nome de formas diferentes.
+
+    Tambem suprime reenvio/reimpressao do MESMO pagador quando o nome saiu
+    truncado (ex.: "Filomena Marinho De Souz" x "Filomena Marinho De Souza
+    Santos") ou grudado a um convenio desconhecido nao coberto por
+    CONVENIO_DISPLAY (ex.: "Sandro Cravo Soares Votorantim Cimento Br -
+    Empre" x "Sandro Cravo Soares"). Janela de data bem mais apertada
+    (0-1 dia) que o cruzamento entre pagadores, pra nao juntar dois
+    pacientes homonimos genuinamente distintos."""
     from datetime import datetime as _dt
     ordenados = sorted(eventos,
                        key=lambda e: PRIORIDADE_PAGADOR.get(e["pagador"], 9))
@@ -274,10 +282,11 @@ def _suprimir_cruzados(eventos):
         if chave and evd["data"]:
             dt = _dt.strptime(evd["data"], "%Y-%m-%d")
             for outro in indice.get(chave, []):
-                if outro["pagador"] == evd["pagador"] or not outro["data"]:
+                if not outro["data"]:
                     continue
+                mesmo_pagador = outro["pagador"] == evd["pagador"]
                 delta = abs((_dt.strptime(outro["data"], "%Y-%m-%d") - dt).days)
-                if delta > 10:
+                if delta > (1 if mesmo_pagador else 10):
                     continue
                 if casa_nome(evd["paciente"], outro["paciente"]):
                     duplicado = True
@@ -314,7 +323,13 @@ def coletar_eventos(pastas=None):
         data = p.get("data")
         if data is not None and not data_valida(data):
             data = None
-        nome, conv = separar_convenio(p["nome"])
+        # so a IDS grudou convenio no campo nome sem separador; nas outras
+        # fontes (Unimed/CardioPro) o nome e so o paciente, e tentar separar
+        # convenio ali arrisca cortar sobrenome real (ex.: "Marinha")
+        if p["empresa"] == "IDS":
+            nome, conv = separar_convenio(p["nome"])
+        else:
+            nome, conv = p["nome"], None
         eventos.append({
             "pagador": p["empresa"],
             "exame": exame_canonico(p["mod"]),
