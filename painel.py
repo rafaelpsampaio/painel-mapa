@@ -22,6 +22,8 @@ import ler_repasses
 import outlook_auth
 import rotina_pendencias
 
+import cache_email
+
 # porta opcional na linha de comando (py painel.py 8799), padrao 8765
 PORTA = int(sys.argv[1]) if len(sys.argv) > 1 else 8765
 URL = f"http://127.0.0.1:{PORTA}/"
@@ -95,7 +97,12 @@ class Handler(BaseHTTPRequestHandler):
                 except Exception:
                     pass  # sem repasses novos nao pode travar o painel
                 with TRAVA:
-                    dados = rotina_pendencias.analisar(dias, token=token)
+                    cache = cache_email.carregar_cache()
+                    progresso = cache_email.sincronizar_um_passo(token, cache)
+                    if progresso:
+                        self._json({"sincronizando": progresso})
+                        return
+                    dados = rotina_pendencias.analisar(cache, dias)
                 try:
                     import cruzar_pagamentos
                     dados["pagamentos_orfaos"] = (
