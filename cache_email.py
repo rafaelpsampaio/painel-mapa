@@ -11,6 +11,11 @@ novas (ver sincronizar_um_passo).
 
 import json
 import os
+import re
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 ARQ_CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "cache_emails.json")
@@ -72,3 +77,87 @@ def salvar_cache(cache):
 def mensagens(cache, pasta):
     """Dicionario {id_mensagem: registro} da pasta logica indicada."""
     return cache["pastas"][pasta]["mensagens"]
+
+
+GRAPH = "https://graph.microsoft.com/v1.0"
+
+
+def _gget(token, url, tentativas=5):
+    """GET autenticado no Graph API, com retry em throttling (HTTP 429)."""
+    req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    espera = 2
+    for tentativa in range(tentativas):
+        try:
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return json.load(r)
+        except urllib.error.HTTPError as e:
+            if e.code == 429 and tentativa < tentativas - 1:
+                retry_after = e.headers.get("Retry-After")
+                time.sleep(float(retry_after) if retry_after else espera)
+                espera *= 2
+                continue
+            corpo = e.read().decode("utf-8", "replace")[:300]
+            raise RuntimeError(f"Erro HTTP {e.code} ao consultar o email: {corpo}")
+
+
+def _listar_pagina(token, url):
+    out = []
+    while url:
+        data = _gget(token, url)
+        out.extend(data.get("value", []))
+        url = data.get("@odata.nextLink")
+    return out
+
+
+def _resolver_ids_pastas(token):
+    pastas = _gget(token, f"{GRAPH}/me/mailFolders?$top=50").get("value", [])
+    return {p["displayName"]: p["id"] for p in pastas}
+
+
+_RE_STYLE = re.compile(r"<style.*?</style>", re.S | re.I)
+_RE_TAG = re.compile(r"<[^>]+>")
+
+
+def _texto_plano_de_corpo(conteudo_html):
+    import html as htmlmod
+    texto = _RE_STYLE.sub(" ", conteudo_html or "")
+    texto = _RE_TAG.sub(" ", texto)
+    return htmlmod.unescape(texto)
+
+
+def _registro_de(msg, config):
+    """Converte uma mensagem do Graph API no registro quase-cru guardado
+    no cache: so os campos usados pela conciliacao, corpo ja em texto
+    plano (sem HTML)."""
+    campo = config["campo_data"]
+    registro = {
+        "assunto": msg.get("subject") or "",
+        "recebido": msg[campo],
+        "conversa": msg.get("conversationId"),
+        "anexos": [a.get("name") or "" for a in msg.get("attachments", [])],
+    }
+    if "from" in config["select"]:
+        try:
+            registro["de"] = msg["from"]["emailAddress"]["address"].lower()
+        except (KeyError, TypeError):
+            registro["de"] = "?"
+    if "body" in config["select"]:
+        registro["corpo_texto"] = _texto_plano_de_corpo(
+            msg.get("body", {}).get("content", ""))
+    return registro
+
+
+def _buscar(token, pasta_id, config, inicio_iso, fim_iso=None):
+    """Mensagens da pasta com campo_data em [inicio_iso, fim_iso), ou
+    [inicio_iso, agora] se fim_iso for None."""
+    campo = config["campo_data"]
+    condicoes = f"{campo} ge {inicio_iso}"
+    if fim_iso:
+        condicoes += f" and {campo} lt {fim_iso}"
+    filtro = urllib.parse.quote(condicoes)
+    ordem = urllib.parse.quote(f"{campo} desc")
+    expand = urllib.parse.quote("attachments($select=name)")
+    params = (f"$select={config['select']}&$top=50&$filter={filtro}"
+              f"&$orderby={ordem}&$expand={expand}")
+    url = f"{GRAPH}/me/mailFolders/{pasta_id}/messages?{params}"
+    return _listar_pagina(token, url)
